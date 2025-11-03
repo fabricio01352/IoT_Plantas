@@ -1,0 +1,194 @@
+/* Estilos generales para html y body */
+html, body {
+    height: 100%;       
+    margin: 0;           
+    padding: 0;         
+}
+
+/* Estilo base para el body */
+body {
+    margin: 0;
+    padding: 0;
+    font-family: 'Segoe UI', Arial, sans-serif; 
+    background: #e6f2ff;                        
+    color: #222;                               
+    box-sizing: border-box;                    
+    min-height: 100vh;                          
+    display: flex;
+    flex-direction: column;                      
+}
+
+/* Encabezado del sitio */
+header {
+    background: #8ec3e6;                        
+    color: #fff;                               
+    display: flex;
+    justify-content: space-between;             
+    align-items: center;                         
+    padding: 12px 24px;                          
+}
+
+/* Información dentro del encabezado */
+.header-info p {
+    margin: 0;
+    font-size: 1.1em;
+}
+
+/* Tamaño del logo */
+.photo-logo {
+    width: 48px;
+    height: 48px;
+}
+
+/* Contenedor principal del contenido */
+main {
+    background: #b3dbff;                        
+    min-height: 80vh;                          
+    padding: 24px;                               
+    flex: 1 0 auto;                             
+}
+
+/* Contenedor de sensores y actuadores */
+.sensores-actuadores {
+    display: flex;
+    flex-direction: column;
+    gap: 32px;                                 
+}
+
+/* Estilos comunes para sensores y actuadores */
+.sensores, .actuadores {
+    width: 100%;
+    text-align: left;
+}
+
+/* Contenedor con ícono y título */
+.icono-titulo {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 8px;
+}
+
+.icono-titulo img {
+    margin-bottom: 0;
+}
+
+/* Estilo del título con ícono */
+.icono-titulo h2 {
+    color: #fff;
+    font-size: 2.2em;
+    margin: 0;
+}
+
+/* Títulos de secciones sensores y actuadores */
+.sensores h1, .actuadores h1 {
+    color: #fff;
+    font-size: 2.2em;
+    margin-bottom: 16px;
+    margin-top: 0;
+}
+
+/* Distribución en cuadrícula para sensores */
+.sensores-grid {
+    display: flex;
+    justify-content: center;
+    gap: 64px;
+    margin-top: 16px;
+}
+
+/* Estilo individual de cada sensor */
+.sensores-grid div {
+    min-width: 140px;
+}
+
+/* Subtítulos de sensores y actuadores */
+.sensores h2, .actuadores h3 {
+    color: #fff;
+    font-size: 1.3em;
+    margin: 8px 0 4px 0;
+}
+
+/* Subtítulo más pequeño para sensores */
+.sensores h4 {
+    color: #fff;
+    font-size: 1em;
+    margin: 4px 0 0 0;
+}
+
+/* Valor numérico o texto del sensor/actuador */
+.valor {
+    font-size: 1.6em;
+    color: #222;
+    margin: 0 0 8px 0;
+}
+
+/* Imágenes decorativas del clima */
+.photo-cloud-sun, .photo-cloud {
+    width: 120px;
+    height: auto;
+    margin-bottom: 8px;
+}
+
+/* Margen adicional para actuadores */
+.actuadores {
+    margin-top: 32px;
+}
+
+/* Cuadrícula para actuadores */
+.actuadores-grid {
+    display: flex;
+    justify-content: center;
+    gap: 64px;
+    margin-top: 16px;
+}
+
+/* Estilo individual de cada actuador */
+.actuadores-grid div {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-width: 140px;
+}
+
+/* Subtítulo de actuador */
+.actuadores h3 {
+    color: #fff;
+    font-size: 1.2em;
+    margin-bottom: 4px;
+}
+
+/* Valor del estado del actuador */
+.actuadores h4 {
+    font-size: 1.5em;
+    margin: 0 0 8px 0;
+}
+
+/* Colores para estados ON/OFF de actuadores */
+.off {
+    color: #ff2222;   /* Rojo para apagado */
+    font-weight: bold;
+}
+
+.on {
+    color: #22ff22;   /* Verde para encendido */
+    font-weight: bold;
+}
+
+/* Imagen decorativa de planta */
+.photo-plant {
+    width: 140px;
+    height: auto;
+    margin-top: 8px;
+}
+
+/* Responsivo para pantallas pequeñas */
+@media (max-width: 900px) {
+    .sensores-grid, .actuadores-grid {
+        flex-direction: column;   
+        gap: 24px;                
+    }
+
+    .photo-cloud-sun, .photo-cloud, .photo-plant {
+        width: 90px;              
+    }
+}
