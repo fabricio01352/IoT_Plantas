@@ -1,34 +1,35 @@
 #include <Arduino.h>
 #include <WiFi.h> 
-#include <PubSubClient.h>         
+#include <PubSubClient.h> // libreria necesaria para publicar en el topic
+#include <ArduinoJson.h>  
 
-// WiFi
+
+// -------------------------------------------------------------------------------------------
+// WiFi, idealmente en un .env pero por ahora cada quien puede mover a su propia red aqui
 const char *ssid = "Mega_2.4G_C091";
 const char *password = "heTdTPE4";
 
+
+// -------------------------------------------------------------------------------------------
+// -------------declaraion de variables, nos importa el servidor mqtt el cual se ejecuta localmente, el puerto por defecto 1883
+//                 y los topics, solo leeremos 3 datos por ahora
+// -------------------------------------------------------------------------------------------
+
 WiFiClient espClient;
-const char* mqtt_server = "192.168.1.6";
+const char* mqtt_server = "localhost";
 const int mqtt_port = 1883;
 const char* mqtt_topic = "sensores/humedad";
 const char* mqtt_topic2 = "sensores/luz";
 const char* mqtt_topic3 = "sensores/pir";
 PubSubClient client(espClient);
 
- int humedad;  // Valor entre 0 y 4095
-    int pir;         // Valor 0 o 1 (detección de movimiento)
-    int luminosidad; 
-
-
-
-
-
-
-
+ int humedad;  // lee humedad
+    int pir;         // deteca radiacion infrarroja
+    int luminosidad;  // 
 
 // Definición de pines de sensores
 #define HUMEDAD_PIN 34  // Pin analógico para sensor de humedad del suelo
 #define LDR_PIN 35  
-    // Pin analógico para sensor de luz (LDR)
 #define PIR_PIN 13      // Pin digital para sensor de movimiento PIR
 
 
@@ -37,6 +38,11 @@ PubSubClient client(espClient);
 
 
 
+
+
+// -------------------------------------------------------------------------------------------
+// ----------funcion para conectarse al servidor mqtt
+// -------------------------------------------------------------------------------------------
 
 
 void reconnect(){
@@ -53,11 +59,12 @@ void reconnect(){
 }
 
 
+// -------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------
 
 void setup() {
-  Serial.begin(9600);  // Inicializa la comunicación serial
+  Serial.begin(9600);  
 
-  // Conexión a WiFi
   WiFi.begin(ssid, password);
 
 
@@ -73,27 +80,16 @@ void setup() {
   client.setServer(mqtt_server, mqtt_port);
 
   reconnect();
+
+
+
+
   // Configuración de los pines
   pinMode(HUMEDAD_PIN, INPUT);
   pinMode(LDR_PIN, INPUT);
   pinMode(PIR_PIN, INPUT);
 
 
-
-
-
-
-
-
-
-
-
-
-
-    // Lectura de sensores
-    int humedad = analogRead(HUMEDAD_PIN);  // Valor entre 0 y 4095
-    int pir = digitalRead(PIR_PIN);         // Valor 0 o 1 (detección de movimiento)
-    int luminosidad = analogRead(LDR_PIN);  // Valor entre 0 y 4095
 
 
   };
@@ -107,14 +103,52 @@ void loop() {
   }
   client.loop(); 
 
+
+
+
+
   humedad = analogRead(HUMEDAD_PIN);
   pir = digitalRead(PIR_PIN);
   luminosidad = analogRead(LDR_PIN);
 
-  //  client.publish("sensores/humedad", "{\"valor\":25.4,\"unidad\":\"C\"}");
-  client.publish("sensores/luz", String(luminosidad).c_str());
-  client.publish("sensores/humedad", String(humedad).c_str());
-  client.publish("sensores/pir", String(pir).c_str());
+
+
+
+  // -------------------------------------------------------------------------------------------
+  // aqui es donde creamos los formatos en JSON para mandarlos a influx db y a cualquier suscriptor de Mosquitto
+  // podemos agregar o quitar campos aqui, en este caso solo tiene VALOR y UNIDAD
+  //  esta es la parte que estaremos modificando si queremos agregar o quitar campos o cosas que mandar a otro cliente
+
+  StaticJsonDocument<100> humedadDoc;
+  humedadDoc["valor"] = String(humedad).c_str();
+  humedadDoc["unidad"] = "%";
+  char humedadPayload [100];
+  serializeJson(humedadDoc, humedadPayload); // formato json {valor: X unidad: Y}
+   client.publish("sensores/humedad",humedadPayload); // publicamos al topic sensores/humedad el payload (cuerpo del mensaje)
+
+
+
+ StaticJsonDocument<100> LuminosidadDoc;
+  LuminosidadDoc["valor"] = String(luminosidad).c_str();
+  LuminosidadDoc["unidad"] = "LX";
+  char luzPayload [100];
+  serializeJson(LuminosidadDoc, luzPayload);
+   client.publish("sensores/luz",luzPayload);
+
+
+
+   StaticJsonDocument<100> pirDoc;
+  pirDoc["valor"] = String(pir).c_str();
+  pirDoc["unidad"] = "%";
+  char pirPayload[100];
+  serializeJson(pirDoc, pirPayload);
+  client.publish("sensores/pir", pirPayload);
+
+
+// -------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------
+
+  // que espere 5 segundos, solo para no quemar mi pc
   delay(5000);
 
 
