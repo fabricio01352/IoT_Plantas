@@ -16,7 +16,7 @@ const char *password = "heTdTPE4";
 // -------------------------------------------------------------------------------------------
 
 WiFiClient espClient;
-const char* mqtt_server = "localhost";
+const char* mqtt_server = "192.168.1.6";
 const int mqtt_port = 1883;
 const char* mqtt_topic = "sensores/humedad";
 const char* mqtt_topic2 = "sensores/luz";
@@ -137,12 +137,12 @@ void loop() {
 
 
 
-   StaticJsonDocument<100> pirDoc;
-  pirDoc["valor"] = String(pir).c_str();
-  pirDoc["unidad"] = "%";
-  char pirPayload[100];
-  serializeJson(pirDoc, pirPayload);
-  client.publish("sensores/pir", pirPayload);
+  //  StaticJsonDocument<100> pirDoc;
+  // pirDoc["valor"] = String(pir).c_str();
+  // pirDoc["unidad"] = "%";
+  // char pirPayload[100];
+  // serializeJson(pirDoc, pirPayload);
+  // client.publish("sensores/pir", pirPayload);
 
 
 // -------------------------------------------------------------------------------------------

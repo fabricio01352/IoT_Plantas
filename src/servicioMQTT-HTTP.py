@@ -23,12 +23,15 @@ token = "oI2F4t12rZStmHnh8RMj89COxeEUcOv0p_JjCSc4m_PPVvOLVqTpRwfKFeRA9KvC25bz_nW
 client = InfluxDBClient(url="https://us-east-1-1.aws.cloud2.influxdata.com/", token=token, org=org)
 write_api = client.write_api(write_options=SYNCHRONOUS)
 
+ultimo_valor_humedad = None
+ultimo_valor_luz = None
 
 # el broker mosquitto esta en la computadora local
 #  y los topics que se suscribe son humedad, luz y pir
 #  los datos que manda los define el esp32, en formato JSON, por ahora solo manda valor y unidad, mas abajo se define el timestamp
 mqtt_broker = "localhost"
-mqtt_topics = ["sensores/humedad", "sensores/luz", "sensores/pir"]
+# mqtt_topics = ["sensores/humedad", "sensores/luz", "sensores/pir"]
+mqtt_topics = ["sensores/humedad", "sensores/luz"]
 
 
 # lista de clientes conectadso al websocket
@@ -50,12 +53,34 @@ main_loop = None
 
 #  esta funcion recibe el topic (humedad, luz o pir) y un payload que es el cuerp odel mensaje
 def guardar_en_influx(topic, payload):
+    global ultimo_valor_humedad, ultimo_valor_luz
     try:
         data = json.loads(payload)
         valor = float(data.get("valor", 0))
         unidad = data.get("unidad", "")
+        sensor = topic.split("/")[-1]
 
+        # AQUI ES DONDE AGREGAREMOS LIMPIEZAS DE DATOS Y CALIDAD DE DATOS
+        # POR AHORA SOLO BUSCAMOS QUE NO EXISTAN DATOS ATIPICOS
 
+        if sensor == "humedad":
+            if not(0 <= valor <= 1023):
+                print(f"valor de humedad fuera del rango: {valor}")
+                return
+            # salto brusco de 200 unidades, deberia estar en 0 a 1023 con analog read, pero si entre lecturas 
+            # hace un salto de mas de 200 unidades es muy probable que seaerror electrico
+        if ultimo_valor_humedad is not None and abs(valor - ultimo_valor_humedad) >200:
+                print(f" vambio brusco en humedad ({ultimo_valor_humedad} → {valor}), descartado")
+                return
+        elif sensor == "luz":
+            if not (0 <= valor <= 1023):
+                print(f" Valor de luz fuera de rango: {valor}")
+                return
+                # cambio de 300 unidades, probable error electronico
+            if ultimo_valor_luz is not None and abs(valor - ultimo_valor_luz) > 300:
+                print(f" Cambio brusco en luz ({ultimo_valor_luz} → {valor}), descartado")
+                return       
+      
 # Esta es la parte que crea la serie de datos que se guarda en la base de datos
 # la estructura que se creo por ahora es el campo VALOR y el campo UNIDAD, ejemplo '23.5' 'Farhenheit"
 #  y el timestamp es la hora actual
@@ -151,16 +176,6 @@ def on_message(client, userdata, msg):
 
     except Exception as e:
         print(f" Error procesando mensaje: {e}")
-
-    # if main_loop:
-    #     # enviamos al cliente mediante websocket
-
-
-    #     asyncio.run_coroutine_threadsafe(enviar_a_clientes(payload), main_loop)
-    # else:
-    #     print(" main_loop an no esta inicializado (deber ser global)")
-
-
 
 
 
