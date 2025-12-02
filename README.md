@@ -132,5 +132,10 @@ IoT_Plantas/
 
 ---
 
-**Autores:** Equipo IoT Plantas  
+**Autores:** 
+* Diego Alcantar
+* Fabricio Aldaco
+* Pablo Galán
+* Manuel Perez
+* Raul Verduzco
 **Curso:** Introducción al Internet de las Cosas
