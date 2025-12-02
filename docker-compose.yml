@@ -1,0 +1,35 @@
+version: '3.8'
+
+services:
+  # Servicio 1: Broker MQTT
+  mosquitto:
+    image: eclipse-mosquitto
+    container_name: broker_mqtt_plantas
+    ports:
+      - "1883:1883"  # Puerto MQTT (Para que el ESP32 entre)
+      - "9001:9001"  # Puerto Websocket 
+    volumes:
+      # Montamos el archivo de configuracion local al contenedor
+      - ./mosquitto/config/mosquitto.conf:/mosquitto/config/mosquitto.conf
+      - ./mosquitto/data:/mosquitto/data
+      - ./mosquitto/log:/mosquitto/log
+    networks:
+      - red_iot
+
+  # Servicio 2: Backend en Python
+  backend:
+    build: ./python_service
+    container_name: cerebro_python_plantas
+    restart: always
+    depends_on:
+      - mosquitto 
+    env_file:
+      - .env      # Carga las variables del archivo .env
+    ports:
+      - "8765:8765" # Puerto del WebSocket
+    networks:
+      - red_iot
+
+networks:
+  red_iot:
+    driver: bridge

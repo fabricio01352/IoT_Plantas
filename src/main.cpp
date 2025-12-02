@@ -1,163 +1,148 @@
 #include <Arduino.h>
-#include <WiFi.h> 
-#include <PubSubClient.h> // libreria necesaria para publicar en el topic
-#include <ArduinoJson.h>  
+#include <WiFi.h>
+#include <PubSubClient.h>
+#include <ArduinoJson.h>
 #include "DHT.h"
 
+// -------------------------------------------------------------------------------------------
+// CONFIGURACIÓN DE CREDENCIALES
+// Estas variables toman los valores que definimos en el platformio.ini
+// -------------------------------------------------------------------------------------------
+
+const char *ssid = WIFI_SSID;
+const char *password = WIFI_PASS;
+const char *mqtt_server = MQTT_SERVER;
 
 // -------------------------------------------------------------------------------------------
-// WiFi, idealmente en un .env pero por ahora cada quien puede mover a su propia red aqui
-const char *ssid = "Tlaneci24G";
-const char *password = "Depas2025";
-
-
-// -------------------------------------------------------------------------------------------
-// -------------declaraion de variables, nos importa el servidor mqtt el cual se ejecuta localmente, el puerto por defecto 1883
-//                 y los topics, solo leeremos 3 datos por ahora
+// DECLARACIÓN DE VARIABLES Y CLIENTES
 // -------------------------------------------------------------------------------------------
 
 WiFiClient espClient;
-const char* mqtt_server = "192.168.10.142";
 const int mqtt_port = 1883;
-const char* mqtt_topic = "sensores/humedad";
-const char* mqtt_topic2 = "sensores/luz";
-const char* mqtt_topic3 = "sensores/pir";
 PubSubClient client(espClient);
 
- int humedad;  // lee humedad
-    int pir;         // deteca radiacion infrarroja
-    int luminosidad;  // 
+// Variables para datos (Hardcodeadas para pruebas sin sensores)
+int humedad = 25;    
+int pir = 0;        
+int luminosidad = 500; 
 
-// Definición de pines de sensores
-#define HUMEDAD_PIN 34  // Pin analógico para sensor de humedad del suelo
-#define LDR_PIN 32  
-#define PIR_PIN 27      // Pin digital para sensor de movimiento PIR
-
-
-
-
-
-
-
-
+// Definición de pines (Se mantienen por si conectas algo despues)
+#define HUMEDAD_PIN 34 
+#define LDR_PIN 32
+#define PIR_PIN 27 
 
 // -------------------------------------------------------------------------------------------
-// ----------funcion para conectarse al servidor mqtt
+// FUNCIÓN PARA CONECTARSE AL MQTT
 // -------------------------------------------------------------------------------------------
-
-
-void reconnect(){
-  while(!client.connected()){
-    Serial.print("Conectando a MQTT...");
-    if(client.connect("ESP32Cliente")){
-      Serial.println("Conectaod");
-    } else{
-      Serial.print("Error: ");
-      Serial.println(client.state());
+void reconnect() {
+  while (!client.connected()) {
+    Serial.print("Intentando conectar a MQTT en ");
+    Serial.print(mqtt_server);
+    Serial.print("...");
+    
+    // Intentamos conectar con un ID único
+    if (client.connect("ESP32_Plantas_Client")) {
+      Serial.println("¡Conectado!");
+    } else {
+      Serial.print("Fallo, rc=");
+      Serial.print(client.state());
+      Serial.println(" intentando de nuevo en 2 segundos");
       delay(2000);
     }
   }
 }
 
-
 // -------------------------------------------------------------------------------------------
-// -------------------------------------------------------------------------------------------
-
+// SETUP
+  // -------------------------------------------------------------------------------------------
 void setup() {
-  Serial.begin(9600);  
+  Serial.begin(115200); // 9600 es muy lento, mejor 115200 hoy en dia
 
+  // Conexión WiFi
   WiFi.begin(ssid, password);
-
+  Serial.print("Conectando a WiFi: ");
+  Serial.println(ssid);
 
   while (WiFi.status() != WL_CONNECTED) {
     delay(1000);
-    Serial.println("Conectando a WiFi...");
+    Serial.print(".");
   }
-  
-  Serial.println("Conectado a WiFi");
-  Serial.print("Dirección IP del ESP32: ");
+
+  Serial.println("");
+  Serial.println("WiFi Conectado");
+  Serial.print("IP asignada: ");
   Serial.println(WiFi.localIP());
 
-  // configurar servidor mqtt
+  // Configurar servidor MQTT
   client.setServer(mqtt_server, mqtt_port);
 
-  reconnect();
-
-
-
-
-  // Configuración de los pines
+  // Configuración de pines
   pinMode(HUMEDAD_PIN, INPUT);
   pinMode(LDR_PIN, INPUT);
   pinMode(PIR_PIN, INPUT);
+}
 
-
-
-
-  };
-
-
-
+// -------------------------------------------------------------------------------------------
+// LOOP PRINCIPAL
+// -------------------------------------------------------------------------------------------
 void loop() {
-
-   if (!client.connected()) {
+  if (!client.connected()) {
     reconnect();
   }
-  client.loop(); 
+  client.loop();
 
-
-
-
-
-  int valor = analogRead(HUMEDAD_PIN);
-  Serial.print("raw: ");
-  Serial.print(valor);
-  int humedad = map(valor,2000,4095,100,0);
-  pir = digitalRead(PIR_PIN);
+  // --- SECCION DE LECTURA DE SENSORES ---
+  // COMENTADO PARA PRUEBAS: Si no tienes sensores, esto lee ruido electrico.
+  // Descomenta las siguientes lineas cuando ya tengas los sensores fisicos.
   
-  // ESTO es lo correcto pero por ahorita me ire por el de temperatura
-  //luminosidad = analogRead(LDR_PIN);
+  /*
+  int valor = analogRead(HUMEDAD_PIN);
+  humedad = map(valor, 2000, 4095, 100, 0); // Actualiza la variable global
+  pir = digitalRead(PIR_PIN);
+  luminosidad = analogRead(LDR_PIN);
+  */
 
+  // --- SIMULACION DE DATOS (HARDCODING) ---
+  // Cambia estos valores manuales para probar tus alertas
+  humedad = 25;  // < 30 para probar la alerta
+  pir = 1;       // 1 detectó movimiento
+  luminosidad = 800; 
 
-
+  Serial.print("Enviando -> Humedad: ");
+  Serial.print(humedad);
+  Serial.print("% | PIR: ");
+  Serial.println(pir);
 
   // -------------------------------------------------------------------------------------------
-  // aqui es donde creamos los formatos en JSON para mandarlos a influx db y a cualquier suscriptor de Mosquitto
-  // podemos agregar o quitar campos aqui, en este caso solo tiene VALOR y UNIDAD
-  //  esta es la parte que estaremos modificando si queremos agregar o quitar campos o cosas que mandar a otro cliente
+  // ENVIO DE DATOS JSON (ArduinoJson v7)
+  // En la version 7 ya no se usa StaticJsonDocument<Tamano>, solo JsonDocument.
+  // La memoria se gestiona sola.
+  // -------------------------------------------------------------------------------------------
 
-  StaticJsonDocument<100> humedadDoc;
-  humedadDoc["valor"] = String(humedad).c_str();
+  // 1. Humedad
+  JsonDocument humedadDoc;
+  humedadDoc["valor"] = humedad; // No necesitas convertir a String, ArduinoJson lo maneja
   humedadDoc["unidad"] = "%";
-  char humedadPayload [100];
-  serializeJson(humedadDoc, humedadPayload); // formato json {valor: X unidad: Y}
-   client.publish("sensores/humedad",humedadPayload); // publicamos al topic sensores/humedad el payload (cuerpo del mensaje)
+  char humedadPayload[100];
+  serializeJson(humedadDoc, humedadPayload);
+  client.publish("sensores/humedad", humedadPayload);
 
-
-
- StaticJsonDocument<100> LuminosidadDoc;
-  LuminosidadDoc["valor"] = String(luminosidad).c_str();
+  // 2. Luminosidad
+  JsonDocument LuminosidadDoc;
+  LuminosidadDoc["valor"] = luminosidad;
   LuminosidadDoc["unidad"] = "LX";
-  char luzPayload [100];
+  char luzPayload[100];
   serializeJson(LuminosidadDoc, luzPayload);
-   client.publish("sensores/luz",luzPayload);
+  client.publish("sensores/luz", luzPayload);
 
-
-
-   StaticJsonDocument<100> pirDoc;
-  pirDoc["valor"] = String(pir).c_str();
+  // 3. PIR (Movimiento)
+  JsonDocument pirDoc;
+  pirDoc["valor"] = pir;
   pirDoc["unidad"] = "";
   char pirPayload[100];
   serializeJson(pirDoc, pirPayload);
   client.publish("sensores/pir", pirPayload);
 
-
-// -------------------------------------------------------------------------------------------
-// -------------------------------------------------------------------------------------------
-
-  // que espere 5 segundos, solo para no quemar mi pc
+  // Esperar 5 segundos antes de la siguiente lectura
   delay(5000);
-
-
-
 }

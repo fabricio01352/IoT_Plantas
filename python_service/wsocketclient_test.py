@@ -2,7 +2,7 @@ import asyncio
 import websockets
 
 async def test_ws():
-    uri = "ws://192.168.1.6:8765"
+    uri = "ws://localhost:8765"
     print(f" Conectando a {uri} ...")
 
     try:

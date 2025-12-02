@@ -1,0 +1,4 @@
+paho-mqtt
+influxdb-client
+websockets
+# asyncio ya viene incluido en Python, no es necesario ponerlo aquí
