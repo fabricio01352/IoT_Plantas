@@ -31,7 +31,7 @@ ultimo_valor_luz = None
 #  los datos que manda los define el esp32, en formato JSON, por ahora solo manda valor y unidad, mas abajo se define el timestamp
 mqtt_broker = "localhost"
 # mqtt_topics = ["sensores/humedad", "sensores/luz", "sensores/pir"]
-mqtt_topics = ["sensores/humedad", "sensores/luz"]
+mqtt_topics = ["sensores/humedad", "sensores/luz", "sensores/pir"]
 
 
 # lista de clientes conectadso al websocket
@@ -64,7 +64,7 @@ def guardar_en_influx(topic, payload):
         # POR AHORA SOLO BUSCAMOS QUE NO EXISTAN DATOS ATIPICOS
 
         if sensor == "humedad":
-            if not(0 <= valor <= 1023):
+            if not(0 <= valor <= 4095):
                 print(f"valor de humedad fuera del rango: {valor}")
                 return
             # salto brusco de 200 unidades, deberia estar en 0 a 1023 con analog read, pero si entre lecturas 

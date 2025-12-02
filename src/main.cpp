@@ -2,12 +2,13 @@
 #include <WiFi.h> 
 #include <PubSubClient.h> // libreria necesaria para publicar en el topic
 #include <ArduinoJson.h>  
+#include "DHT.h"
 
 
 // -------------------------------------------------------------------------------------------
 // WiFi, idealmente en un .env pero por ahora cada quien puede mover a su propia red aqui
-const char *ssid = "Mega_2.4G_C091";
-const char *password = "heTdTPE4";
+const char *ssid = "Tlaneci24G";
+const char *password = "Depas2025";
 
 
 // -------------------------------------------------------------------------------------------
@@ -16,7 +17,7 @@ const char *password = "heTdTPE4";
 // -------------------------------------------------------------------------------------------
 
 WiFiClient espClient;
-const char* mqtt_server = "192.168.1.6";
+const char* mqtt_server = "192.168.10.142";
 const int mqtt_port = 1883;
 const char* mqtt_topic = "sensores/humedad";
 const char* mqtt_topic2 = "sensores/luz";
@@ -29,8 +30,8 @@ PubSubClient client(espClient);
 
 // Definición de pines de sensores
 #define HUMEDAD_PIN 34  // Pin analógico para sensor de humedad del suelo
-#define LDR_PIN 35  
-#define PIR_PIN 13      // Pin digital para sensor de movimiento PIR
+#define LDR_PIN 32  
+#define PIR_PIN 27      // Pin digital para sensor de movimiento PIR
 
 
 
@@ -72,6 +73,7 @@ void setup() {
     delay(1000);
     Serial.println("Conectando a WiFi...");
   }
+  
   Serial.println("Conectado a WiFi");
   Serial.print("Dirección IP del ESP32: ");
   Serial.println(WiFi.localIP());
@@ -107,9 +109,14 @@ void loop() {
 
 
 
-  humedad = analogRead(HUMEDAD_PIN);
+  int valor = analogRead(HUMEDAD_PIN);
+  Serial.print("raw: ");
+  Serial.print(valor);
+  int humedad = map(valor,2000,4095,100,0);
   pir = digitalRead(PIR_PIN);
-  luminosidad = analogRead(LDR_PIN);
+  
+  // ESTO es lo correcto pero por ahorita me ire por el de temperatura
+  //luminosidad = analogRead(LDR_PIN);
 
 
 
@@ -137,12 +144,12 @@ void loop() {
 
 
 
-  //  StaticJsonDocument<100> pirDoc;
-  // pirDoc["valor"] = String(pir).c_str();
-  // pirDoc["unidad"] = "%";
-  // char pirPayload[100];
-  // serializeJson(pirDoc, pirPayload);
-  // client.publish("sensores/pir", pirPayload);
+   StaticJsonDocument<100> pirDoc;
+  pirDoc["valor"] = String(pir).c_str();
+  pirDoc["unidad"] = "";
+  char pirPayload[100];
+  serializeJson(pirDoc, pirPayload);
+  client.publish("sensores/pir", pirPayload);
 
 
 // -------------------------------------------------------------------------------------------
