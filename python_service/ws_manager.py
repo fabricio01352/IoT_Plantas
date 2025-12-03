@@ -14,14 +14,17 @@ class WebSocketManager:
             self.clients.remove(websocket)
             print("[WS] Cliente desconectado")
 
-    async def enviar_alerta(self, mensaje):
+    # Renombramos a 'broadcast' para que tenga sentido enviar datos y alertas
+    async def broadcast(self, mensaje):
         if self.clients:
             # Envia el mensaje a todos los clientes conectados
+            # mensaje debe ser un String (JSON.dumps)
             await asyncio.gather(*[client.send(mensaje) for client in self.clients])
-            print(f"[WS] Alerta enviada: {mensaje}")
+            # print(f"[WS] Enviado a {len(self.clients)} clientes")
 
     async def start_server(self):
-        # Inicia el servidor en el puerto 8765
-        print("[WS] Servidor escuchando en puerto 8765...")
+        # NOTA: Tu puerto en Python es 8765. 
+        # Asegúrate de poner ese puerto en el index.html
+        print("[WS] Servidor escuchando en 0.0.0.0:8765...")
         async with websockets.serve(self.handler, "0.0.0.0", 8765):
-            await asyncio.Future() # Mantiene el servidor corriendo
+            await asyncio.Future()

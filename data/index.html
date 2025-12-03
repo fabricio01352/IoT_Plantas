@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Monitor de Plantas IoT</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&display=swap" rel="stylesheet">
+</head>
+
+<body>
+
+    <div class="container">
+        <header>
+            <h1>🌱 Smart Plant Monitor</h1>
+            <div id="connection-status" class="status-badge disconnected">Desconectado</div>
+        </header>
+
+        <div id="alert-container" class="alert-box hidden">
+            <span id="alert-message">⚠️ Alerta: Niveles normales</span>
+        </div>
+
+        <div class="dashboard-grid">
+
+            <div class="card" id="card-humedad">
+                <h3>💧 Humedad del Suelo</h3>
+                <div class="value-container">
+                    <span id="val-humedad">--</span><span class="unit">%</span>
+                </div>
+                <p class="subtitle" id="status-humedad">Esperando datos...</p>
+            </div>
+
+            <div class="card" id="card-temp">
+                <h3>🌡️ Temperatura</h3>
+                <div class="value-container">
+                    <span id="val-temp">--</span><span class="unit">°C</span>
+                </div>
+                <p class="subtitle" id="status-temp">Ambiente</p>
+            </div>
+
+            <div class="card">
+                <h3>☀️ Luminosidad</h3>
+                <div class="value-container">
+                    <span id="val-luz">--</span><span class="unit">lx</span>
+                </div>
+                <p class="subtitle">Sensor LDR</p>
+            </div>
+
+            <div class="card">
+                <h3>👀 Último Movimiento</h3>
+                <div class="value-text" id="val-pir">
+                    Sin detección reciente
+                </div>
+                <p class="subtitle">Registro de actividad</p>
+            </div>
+
+            <div class="card wide-card">
+                <h3>Grafica Humedad</h3>
+                <div class="grafana-container">
+                    <iframe
+                        src="http://192.168.1.212:3000/d-solo/adfsv7j/plantas?orgId=1&timezone=browser&refresh=5s&theme=dark&panelId=panel-1&__feature.dashboardSceneSolo=true"
+                        width="100%" height="200" frameborder="0">
+                    </iframe>
+                </div>
+            </div>
+
+            <div class="card wide-card">
+                <h3>🌡️ Tendencia de Temperatura (Histórico)</h3>
+                <div class="grafana-container">
+                    <!-- PEGA AQUÍ TU LINK DE GRAFANA DE TEMPERATURA -->
+                    <iframe 
+                        src="http://192.168.1.212:3000/d-solo/ad4fffw/tendencia-temperatura?orgId=1&from=1764721726063&to=1764743326063&timezone=browser&theme=dark&panelId=panel-1&__feature.dashboardSceneSolo=true" 
+                        width="100%" 
+                        height="250" 
+                        frameborder="0">
+                    </iframe>
+                </div>
+            </div>
+
+            <div class="card wide-card">
+                <h3>📊 Análisis de Correlación (Humedad vs Temperatura)</h3>
+                <div class="grafana-container">
+                    <!-- 
+                        PEGA AQUÍ TU LINK DE GRAFANA COMBINADO 
+                        Recuerda: Esta gráfica debe tener 2 líneas (Humedad y Temp)
+                    -->
+                    <iframe 
+                        src="http://192.168.1.212:3000/d-solo/ad8b667/humedad-y-temperatura?orgId=1&from=1764722404330&to=1764744004330&timezone=browser&theme=dark&panelId=panel-1&__feature.dashboardSceneSolo=true" 
+                        width="100%" 
+                        height="300" 
+                        frameborder="0">
+                    </iframe>
+                </div>
+                <p class="subtitle" style="text-align: center; margin-top: 10px;">
+                    Comparativa para identificar patrones de secado.
+                </p>
+            </div>
+            <!-- === NUEVA GRÁFICA: KPI 4 LUMINOSIDAD === -->
+            <div class="card wide-card">
+                <h3>☀️ Ciclo de Iluminación (Día/Noche)</h3>
+                <div class="grafana-container">
+                    <!-- PEGA AQUÍ TU LINK DE GRAFANA DE LUZ -->
+                    <iframe 
+                        src="http://192.168.1.212:3000/d-solo/ad47l67/historial-luz?orgId=1&from=1764722780968&to=1764744380968&timezone=browser&theme=dark&panelId=panel-1&__feature.dashboardSceneSolo=true" 
+                        width="100%" 
+                        height="250" 
+                        frameborder="0">
+                    </iframe>
+                </div>
+            </div>
+
+            <!-- === NUEVA SECCIÓN: KPI 5 LOG DE EVENTOS === -->
+            <div class="card wide-card">
+                <h3>🛡️ Registro de Seguridad (Últimos Movimientos)</h3>
+                <div class="grafana-container">
+                    <!-- PEGA AQUÍ TU LINK DE LA TABLA DE GRAFANA -->
+                    <iframe 
+                        src="http://192.168.1.212:3000/d-solo/adhljrm/pir?orgId=1&from=1764723280754&to=1764744880754&timezone=browser&theme=dark&panelId=panel-1&__feature.dashboardSceneSolo=true" 
+                        width="100%" 
+                        height="250" 
+                        frameborder="0">
+                    </iframe>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // CONFIGURACIÓN WEBSOCKET
+        const wsUrl = 'ws://192.168.1.212:8765';
+        let socket;
+
+        function connectWebSocket() {
+            socket = new WebSocket(wsUrl);
+
+            socket.onopen = function () {
+                document.getElementById('connection-status').innerText = 'Conectado a Python';
+                document.getElementById('connection-status').classList.replace('disconnected', 'connected');
+            };
+
+            socket.onmessage = function (event) {
+                const data = JSON.parse(event.data);
+                updateDashboard(data);
+            };
+
+            socket.onclose = function () {
+                document.getElementById('connection-status').innerText = 'Reconectando...';
+                document.getElementById('connection-status').classList.replace('connected', 'disconnected');
+                setTimeout(connectWebSocket, 3000);
+            };
+        }
+
+        function updateDashboard(data) {
+            // KPI 1: Humedad
+            if (data.humedad !== undefined) {
+                const hum = data.humedad;
+                document.getElementById('val-humedad').innerText = hum;
+                const cardHum = document.getElementById('card-humedad');
+
+                if (hum < 30) {
+                    cardHum.style.border = "2px solid #ff4444";
+                    document.getElementById('status-humedad').innerText = "¡SUELO SECO!";
+                } else if (hum > 70) {
+                    cardHum.style.border = "2px solid #33b5e5";
+                    document.getElementById('status-humedad').innerText = "Exceso de agua";
+                } else {
+                    cardHum.style.border = "1px solid #333";
+                    document.getElementById('status-humedad').innerText = "Humedad Óptima";
+                }
+            }
+
+            // KPI 2: Temperatura
+            if(data.temperatura !== undefined) {
+                const temp = data.temperatura;
+                document.getElementById('val-temp').innerText = temp;
+                
+                const cardTemp = document.getElementById('card-temp');
+                const statusTemp = document.getElementById('status-temp');
+
+                if (temp < 15) {
+                    // CRÍTICO FRÍO (< 15°C) -> Borde Azul
+                    cardTemp.style.border = "2px solid #33b5e5";
+                    statusTemp.innerText = "¡Riesgo de Frío!";
+                    statusTemp.style.color = "#33b5e5";
+                } else if (temp > 28) {
+                    // CRÍTICO CALOR (> 28°C) -> Borde Rojo
+                    cardTemp.style.border = "2px solid #ff4444";
+                    statusTemp.innerText = "¡Calor Excesivo!";
+                    statusTemp.style.color = "#ff4444";
+                } else {
+                    // ÓPTIMO (15-28°C) -> Borde Normal
+                    cardTemp.style.border = "1px solid #333";
+                    statusTemp.innerText = "Temperatura Óptima";
+                    statusTemp.style.color = "#666"; // Color gris normal
+                }
+            }
+
+            // KPI 4: Luz
+            if(data.luz !== undefined) {
+                const luz = data.luz;
+                document.getElementById('val-luz').innerText = luz;
+                
+                const statusLuz = document.getElementById('status-luz'); // Asegúrate que tu HTML tenga este ID en el <p> de la tarjeta
+                const cardLuz = document.getElementById('card-luz'); // Asegúrate de agregar id="card-luz" al div de la tarjeta
+                
+                // Lógica Visual
+                if(luz < 300) {
+                    statusLuz.innerText = "🌑 Oscuridad";
+                    cardLuz.style.border = "1px solid #555"; // Gris oscuro
+                } else if (luz > 2000) {
+                    statusLuz.innerText = "☀️ Luz Directa (Alta)";
+                    cardLuz.style.border = "2px solid #ffbb33"; // Amarillo brillante
+                } else {
+                    statusLuz.innerText = "☁️ Luz Indirecta (Óptima)";
+                    cardLuz.style.border = "2px solid #00C851"; // Verde
+                }
+            }
+
+            // KPI 5: PIR (Movimiento)
+            if(data.pir !== undefined) {
+                const pirVal = data.pir;
+                const cardPir = document.getElementById('card-pir'); // Asegúrate de tener id="card-pir" en el div
+                
+                if (pirVal === 1) {
+                    // SI HAY MOVIMIENTO:
+                    const now = new Date();
+                    // Actualizamos la hora de la "Última detección"
+                    document.getElementById('val-pir').innerText = now.toLocaleTimeString();
+                    
+                    // Efecto visual: Cambiar fondo a rojo oscuro momentáneamente
+                    cardPir.style.backgroundColor = "#b71c1c"; 
+                    cardPir.style.border = "2px solid #ff4444";
+                } else {
+                    // SI NO HAY MOVIMIENTO (Regresa a la normalidad)
+                    cardPir.style.backgroundColor = "#1e1e1e"; // Color original
+                    cardPir.style.border = "1px solid #333";
+                }
+            }
+
+            // MANEJO DE ALERTAS (Corregido para evitar parpadeo)
+            // Solo actuamos si el JSON trae explícitamente la clave "alerta"
+            if (data.alerta !== undefined) {
+                const alertBox = document.getElementById('alert-container');
+                if (data.alerta !== "") {
+                    // Si hay texto de alerta, mostramos el cuadro
+                    alertBox.classList.remove('hidden');
+                    document.getElementById('alert-message').innerText = "⚠️ " + data.alerta;
+                } else {
+                    // Si la alerta viene vacía (humedad normal), ocultamos
+                    alertBox.classList.add('hidden');
+                }
+            }
+        }
+
+        connectWebSocket();
+    </script>
+</body>
+
+</html>

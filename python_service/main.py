@@ -5,7 +5,7 @@ import paho.mqtt.client as mqtt
 from database import DatabaseManager
 from ws_manager import WebSocketManager
 
-# Instancias de nuestros modulos
+# Instancias
 db_manager = DatabaseManager()
 ws_manager = WebSocketManager()
 main_loop = None
@@ -15,7 +15,8 @@ main_loop = None
 # -------------------------------------------------------------------------
 
 def on_connect(client, userdata, flags, rc):
-    topics = ["sensores/humedad", "sensores/luz", "sensores/pir"]
+    # Agregué sensores/temperatura por si decides enviarla después
+    topics = ["sensores/humedad", "sensores/luz", "sensores/pir", "sensores/temperatura"]
     if rc == 0:
         print("[MQTT] Conectado exitosamente")
         for t in topics:
@@ -26,32 +27,86 @@ def on_connect(client, userdata, flags, rc):
 
 def on_message(client, userdata, msg):
     global main_loop
-    payload = msg.payload.decode()
+    payload_str = msg.payload.decode()
     topic = msg.topic
     
-    # 1. Guardar en Base de Datos (Delegamos a db_manager)
-    db_manager.guardar(topic, payload)
+    # 1. Guardar en Base de Datos (InfluxDB)
+    # Esto sigue igual, guardamos todo el histórico
+    db_manager.guardar(topic, payload_str)
 
-    # 2. Logica de Alertas (Delegamos el envio a ws_manager)
+    # 2. Procesar para WebSocket (Dashboard en Tiempo Real)
     try:
-        data = json.loads(payload)
-        valor = float(data.get("valor", 0))
-        unidad = data.get("unidad", "")
+        data_in = json.loads(payload_str) # Lo que llega del ESP32
+        valor = float(data_in.get("valor", 0))
+        
+        # Preparamos el JSON para el Frontend
+        ws_payload = {}
 
-        # Regla de Negocio: Humedad Critica
-        if "humedad" in topic and valor < 30:
-            mensaje = f"ALERTA: Humedad critica detectada: {valor}{unidad}"
+        # Mapeamos el tópico MQTT a las claves que espera el HTML
+        if "humedad" in topic:
+            ws_payload["humedad"] = valor
             
-            # Usamos el loop principal de asyncio para enviar el mensaje asincrono
-            # desde este hilo sincrono de MQTT
-            if main_loop and main_loop.is_running():
-                asyncio.run_coroutine_threadsafe(
-                    ws_manager.enviar_alerta(mensaje), 
-                    main_loop
-                )
+            # REGLA DE ALERTA (Humedad Baja)
+            if valor < 30:
+                ws_payload["alerta"] = f"Humedad crítica: {valor}%"
+            elif valor > 70:
+                # Opcional: Limpiar alerta o avisar exceso
+                pass 
+            else:
+                # Si todo está bien, enviamos alerta vacía para limpiar el mensaje rojo
+                ws_payload["alerta"] = ""
+
+        # KPI 4: LUMINOSIDAD
+        elif "luz" in topic:
+            ws_payload["luz"] = valor
+            
+            # Reglas de Negocio (Ajusta estos números según tu sensor real)
+            # < 300: Muy oscuro (Alerta si es de día)
+            # 300 - 2000: Luz Indirecta (Ideal)
+            # > 2000: Luz Directa / Sol pleno
+            
+            if valor < 300:
+                alerta_msg = "ALERTA: Poca luz para la planta"
+            elif valor > 2000:
+                alerta_msg = "ALERTA: Exceso de luz (Sol directo)"
+            else:
+                alerta_msg = "" # Luz óptima
+
+        # KPI 5: MOVIMIENTO (PIR)
+        elif "pir" in topic:
+            ws_payload["pir"] = valor
+            
+            # Solo generamos alerta si detecta movimiento (valor 1)
+            if valor == 1:
+                alerta_msg = "ALERTA: ¡Movimiento detectado!"
+            else:
+                alerta_msg = "" # Silencio cuando no hay movimiento
+
+        # KPI 2: TEMPERATURA
+        elif "temperatura" in topic:
+            ws_payload["temperatura"] = valor
+            
+            # Reglas de Negocio del KPI
+            if valor < 15:
+                alerta_msg = f"ALERTA: Temperatura Baja ({valor}°C)"
+            elif valor > 28:
+                alerta_msg = f"ALERTA: Calor Excesivo ({valor}°C)"
+            else:
+                # Si está en rango óptimo (15-28), no hay alerta
+                alerta_msg = ""
+
+        # 3. ENVIAR AL DASHBOARD
+        # Convertimos el diccionario a String JSON
+        mensaje_ws = json.dumps(ws_payload)
+
+        if main_loop and main_loop.is_running():
+            asyncio.run_coroutine_threadsafe(
+                ws_manager.broadcast(mensaje_ws), 
+                main_loop
+            )
 
     except Exception as e:
-        print(f"[MAIN] Error procesando reglas: {e}")
+        print(f"[MAIN] Error procesando mensaje: {e}")
 
 # -------------------------------------------------------------------------
 # MAIN
@@ -73,11 +128,11 @@ async def main():
     
     try:
         mqtt_client.connect(mqtt_broker, mqtt_port, 60)
-        mqtt_client.loop_start() # Usamos loop_start para que corra en su propio hilo background
+        mqtt_client.loop_start() 
     except Exception as e:
         print(f"[MQTT] Error de conexion: {e}")
 
-    # Iniciamos el servidor WebSocket (esto bloqueara la ejecucion aqui, manteniendo el script vivo)
+    # Iniciamos el servidor WebSocket
     await ws_manager.start_server()
 
 if __name__ == "__main__":

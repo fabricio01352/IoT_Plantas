@@ -1,38 +1,36 @@
-import os
 import json
-from datetime import datetime
-from influxdb_client import InfluxDBClient, Point, WritePrecision
-from influxdb_client.client.write_api import SYNCHRONOUS
+from influxdb import InfluxDBClient
 
 class DatabaseManager:
     def __init__(self):
-        # Carga de variables
-        self.url = os.getenv('INFLUXDB_URL', "")
-        self.token = os.getenv('INFLUXDB_TOKEN', "")
-        self.org = os.getenv('INFLUXDB_ORG', "")
-        self.bucket = os.getenv('INFLUXDB_BUCKET', "")
+        # Conexión directa al servicio 'influxdb' definido en Docker
+        # No necesitamos tokens ni orgs complicados para la versión 1.8
+        self.client = InfluxDBClient(host='influxdb', port=8086)
         
-        # Inicializacion del cliente
-        self.client = InfluxDBClient(url=self.url, token=self.token, org=self.org)
-        self.write_api = self.client.write_api(write_options=SYNCHRONOUS)
+        # Aseguramos que la base de datos exista y la seleccionamos
+        self.client.create_database('iot_data')
+        self.client.switch_database('iot_data')
         
-        # Variables para control de calidad (cache)
+        # TUS VARIABLES DE CONTROL (Las mantuve intactas)
         self.ultimo_valor_humedad = None
         self.ultimo_valor_luz = None
 
     def validar_datos(self, sensor, valor):
-        # Logica de validacion y limpieza
+        # --- TU LÓGICA ORIGINAL DE VALIDACIÓN ---
         if sensor == "humedad":
+            # Si el sensor da valores locos fuera de rango
             if not(0 <= valor <= 4095): return False
+            
+            # Filtro de "saltos bruscos" (ruido)
             if self.ultimo_valor_humedad is not None and abs(valor - self.ultimo_valor_humedad) > 200:
-                print(f"Salto brusco en humedad descartado: {valor}")
+                print(f"[FILTRO] Salto brusco en humedad descartado: {valor}")
                 return False
             self.ultimo_valor_humedad = valor
             
         elif sensor == "luz":
             if not (0 <= valor <= 4095): return False
             if self.ultimo_valor_luz is not None and abs(valor - self.ultimo_valor_luz) > 300:
-                print(f"Salto brusco en luz descartado: {valor}")
+                print(f"[FILTRO] Salto brusco en luz descartado: {valor}")
                 return False
             self.ultimo_valor_luz = valor
             
@@ -42,22 +40,30 @@ class DatabaseManager:
         try:
             data = json.loads(payload)
             valor = float(data.get("valor", 0))
-            unidad = data.get("unidad", "")
-            sensor = topic.split("/")[-1]
+            # Identificamos el sensor por el tópico (ej: sensores/humedad -> humedad)
+            sensor_name = topic.split("/")[-1]
 
-            if not self.validar_datos(sensor, valor):
+            # 1. VALIDAMOS ANTES DE GUARDAR
+            # (Si tu función dice False, no guardamos nada)
+            if not self.validar_datos(sensor_name, valor):
                 return
 
-            p = (
-                Point(sensor)
-                .tag("sensor", "esp32")
-                .field("valor", valor)
-                .field("unidad", unidad)
-                .time(datetime.utcnow(), WritePrecision.NS)
-            )
+            # 2. PREPARAMOS EL DATO PARA INFLUXDB v1
+            json_body = [
+                {
+                    "measurement": sensor_name,
+                    "tags": {
+                        "origen": "esp32_lab"
+                    },
+                    "fields": {
+                        "value": valor
+                    }
+                }
+            ]
 
-            self.write_api.write(bucket=self.bucket, org=self.org, record=p)
-            print(f"[DB] Guardado: {sensor} -> {valor}{unidad}")
+            # 3. GUARDAMOS
+            self.client.write_points(json_body)
+            print(f"[DB] Guardado: {sensor_name} -> {valor}")
 
         except Exception as e:
             print(f"[DB] Error: {e}")

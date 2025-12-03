@@ -1,35 +1,68 @@
 version: '3.8'
 
 services:
-  # Servicio 1: Broker MQTT
+  # 1. BROKER MQTT
   mosquitto:
     image: eclipse-mosquitto
     container_name: broker_mqtt_plantas
     ports:
-      - "1883:1883"  # Puerto MQTT (Para que el ESP32 entre)
-      - "9001:9001"  # Puerto Websocket 
+      - "1883:1883"
+      - "9001:9001"
     volumes:
-      # Montamos el archivo de configuracion local al contenedor
       - ./mosquitto/config/mosquitto.conf:/mosquitto/config/mosquitto.conf
-      - ./mosquitto/data:/mosquitto/data
-      - ./mosquitto/log:/mosquitto/log
     networks:
       - red_iot
 
-  # Servicio 2: Backend en Python
+  # 2. CEREBRO PYTHON
   backend:
     build: ./python_service
     container_name: cerebro_python_plantas
     restart: always
     depends_on:
-      - mosquitto 
+      - mosquitto
+      - influxdb
     env_file:
-      - .env      # Carga las variables del archivo .env
+      - .env
     ports:
-      - "8765:8765" # Puerto del WebSocket
+      - "8765:8765"
     networks:
       - red_iot
+
+  # 3. BASE DE DATOS (InfluxDB)
+  influxdb:
+    image: influxdb:1.8
+    container_name: db_influx_plantas
+    ports:
+      - "8086:8086"
+    environment:
+      - INFLUXDB_DB=iot_data  # Crea la base de datos automáticamente
+    volumes:
+      - influxdb_data:/var/lib/influxdb
+    networks:
+      - red_iot
+
+  # 4. GRAFANA (Visualización)
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana_plantas
+    ports:
+      - "3000:3000"
+    depends_on:
+      - influxdb
+    volumes:
+      - grafana_data:/var/lib/grafana
+    networks:
+      - red_iot
+    # ESTO ES CRÍTICO PARA QUE SE VEA EN TU HTML:
+    environment:
+      - GF_SECURITY_ALLOW_EMBEDDING=true
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Viewer
 
 networks:
   red_iot:
     driver: bridge
+
+volumes:
+  influxdb_data:
+  grafana_data:

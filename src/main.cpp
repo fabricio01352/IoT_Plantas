@@ -3,10 +3,11 @@
 #include <PubSubClient.h>
 #include <ArduinoJson.h>
 #include "DHT.h"
+#include <SPIFFS.h>
+#include <WebServer.h>
 
 // -------------------------------------------------------------------------------------------
-// CONFIGURACIÓN DE CREDENCIALES
-// Estas variables toman los valores que definimos en el platformio.ini
+// CONFIGURACIÓN DE CREDENCIALES (platformio.ini)
 // -------------------------------------------------------------------------------------------
 
 const char *ssid = WIFI_SSID;
@@ -14,135 +15,220 @@ const char *password = WIFI_PASS;
 const char *mqtt_server = MQTT_SERVER;
 
 // -------------------------------------------------------------------------------------------
-// DECLARACIÓN DE VARIABLES Y CLIENTES
+// CLIENTES
 // -------------------------------------------------------------------------------------------
 
 WiFiClient espClient;
-const int mqtt_port = 1883;
 PubSubClient client(espClient);
+WebServer server(80);
 
-// Variables para datos (Hardcodeadas para pruebas sin sensores)
-int humedad = 25;    
-int pir = 0;        
-int luminosidad = 500; 
+const int mqtt_port = 1883;
 
-// Definición de pines (Se mantienen por si conectas algo despues)
-#define HUMEDAD_PIN 34 
+// -------------------------------------------------------------------------------------------
+// VARIABLES DE PRUEBA (sensores simulados)
+// -------------------------------------------------------------------------------------------
+
+int humedad = 25;
+int pir = 0;
+int luminosidad = 500;
+float temperatura = 24.0; // <--- NUEVA VARIABLE PARA TEMP
+
+// -------------------------------------------------------------------------------------------
+// PINES
+// -------------------------------------------------------------------------------------------
+#define HUMEDAD_PIN 34
 #define LDR_PIN 32
-#define PIR_PIN 27 
+#define PIR_PIN 27
+#define DHTPIN 4      // Pin donde conectarás el DHT11 en el futuro
+#define DHTTYPE DHT11
+
+DHT dht(DHTPIN, DHTTYPE); // Inicializamos el objeto DHT
 
 // -------------------------------------------------------------------------------------------
-// FUNCIÓN PARA CONECTARSE AL MQTT
+// SERVIDOR WEB – archivos desde SPIFFS
 // -------------------------------------------------------------------------------------------
-void reconnect() {
-  while (!client.connected()) {
-    Serial.print("Intentando conectar a MQTT en ");
-    Serial.print(mqtt_server);
-    Serial.print("...");
-    
-    // Intentamos conectar con un ID único
-    if (client.connect("ESP32_Plantas_Client")) {
-      Serial.println("¡Conectado!");
-    } else {
-      Serial.print("Fallo, rc=");
-      Serial.print(client.state());
-      Serial.println(" intentando de nuevo en 2 segundos");
-      delay(2000);
+
+void handleRoot() {
+    File file = SPIFFS.open("/index.html", "r");
+    if (!file) {
+        server.send(404, "text/plain", "index.html no encontrado");
+        return;
     }
-  }
+    server.streamFile(file, "text/html");
+    file.close();
+}
+
+void handleCSS() {
+    File file = SPIFFS.open("/styles.css", "r");
+    if (!file) {
+        server.send(404, "text/plain", "styles.css no encontrado");
+        return;
+    }
+    server.streamFile(file, "text/css");
+    file.close();
+}
+
+void handleImages() {
+    String path = server.uri();
+    File file = SPIFFS.open(path, "r");
+
+    if (!file) {
+        server.send(404, "text/plain", "Imagen no encontrada");
+        return;
+    }
+
+    if (path.endsWith(".svg")) server.streamFile(file, "image/svg+xml");
+    else if (path.endsWith(".png")) server.streamFile(file, "image/png");
+    else if (path.endsWith(".jpg")) server.streamFile(file, "image/jpeg");
+    else server.streamFile(file, "application/octet-stream");
+
+    file.close();
+}
+
+// -------------------------------------------------------------------------------------------
+// ENDPOINT /e PARA EL FRONTEND
+// -------------------------------------------------------------------------------------------
+
+void handleData() {
+    // Actualizamos también aquí por si alguien consulta directo a la API del ESP
+    String data = "humedad:" + String(humedad) +
+                  ",pir:" + String(pir) +
+                  ",luminosidad:" + String(luminosidad) +
+                  ",temperatura:" + String(temperatura) + 
+                  ",led:0,zumbador:0";
+
+    server.send(200, "text/plain", data);
+}
+
+// -------------------------------------------------------------------------------------------
+// MQTT RECONNECT
+// -------------------------------------------------------------------------------------------
+
+void reconnect() {
+    while (!client.connected()) {
+        Serial.print("Intentando conectar a MQTT...");
+        if (client.connect("ESP32_Plantas_Client")) {
+            Serial.println("Conectado.");
+        } else {
+            Serial.print("Error rc=");
+            Serial.print(client.state());
+            Serial.println(" | Reintentando en 2s...");
+            delay(2000);
+        }
+    }
 }
 
 // -------------------------------------------------------------------------------------------
 // SETUP
-  // -------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------
+
 void setup() {
-  Serial.begin(115200); // 9600 es muy lento, mejor 115200 hoy en dia
+    Serial.begin(115200);
 
-  // Conexión WiFi
-  WiFi.begin(ssid, password);
-  Serial.print("Conectando a WiFi: ");
-  Serial.println(ssid);
+    // ----------------- MONTAR SPIFFS -----------------
+    if (!SPIFFS.begin(true)) {
+        Serial.println("❌ Error montando SPIFFS");
+    } else {
+        Serial.println("✅ SPIFFS montado correctamente");
+    }
 
-  while (WiFi.status() != WL_CONNECTED) {
-    delay(1000);
-    Serial.print(".");
-  }
+    // ----------------- WIFI -----------------
+    WiFi.begin(ssid, password);
+    Serial.print("Conectando a WiFi ");
 
-  Serial.println("");
-  Serial.println("WiFi Conectado");
-  Serial.print("IP asignada: ");
-  Serial.println(WiFi.localIP());
+    while (WiFi.status() != WL_CONNECTED) {
+        Serial.print(".");
+        delay(500);
+    }
 
-  // Configurar servidor MQTT
-  client.setServer(mqtt_server, mqtt_port);
+    Serial.println("\n✅ WiFi conectado");
+    Serial.print("IP del ESP32: ");
+    Serial.println(WiFi.localIP());
 
-  // Configuración de pines
-  pinMode(HUMEDAD_PIN, INPUT);
-  pinMode(LDR_PIN, INPUT);
-  pinMode(PIR_PIN, INPUT);
+    // ----------------- SERVIDOR HTTP -----------------
+    server.on("/", HTTP_GET, handleRoot);
+    server.on("/styles.css", HTTP_GET, handleCSS);
+    server.on("/e", HTTP_GET, handleData);
+
+    server.begin();
+    Serial.println("🌐 Servidor web iniciado en puerto 80");
+
+    // ----------------- MQTT -----------------
+    client.setServer(mqtt_server, mqtt_port);
+
+    // ----------------- PINES & SENSORES -----------------
+    pinMode(HUMEDAD_PIN, INPUT);
+    pinMode(LDR_PIN, INPUT);
+    pinMode(PIR_PIN, INPUT);
+    dht.begin(); // Iniciamos el DHT aunque usaremos datos falsos por ahora
 }
 
 // -------------------------------------------------------------------------------------------
-// LOOP PRINCIPAL
+// LOOP
 // -------------------------------------------------------------------------------------------
+
 void loop() {
-  if (!client.connected()) {
-    reconnect();
-  }
-  client.loop();
+    // Servidor Web
+    server.handleClient();
 
-  // --- SECCION DE LECTURA DE SENSORES ---
-  // COMENTADO PARA PRUEBAS: Si no tienes sensores, esto lee ruido electrico.
-  // Descomenta las siguientes lineas cuando ya tengas los sensores fisicos.
-  
-  /*
-  int valor = analogRead(HUMEDAD_PIN);
-  humedad = map(valor, 2000, 4095, 100, 0); // Actualiza la variable global
-  pir = digitalRead(PIR_PIN);
-  luminosidad = analogRead(LDR_PIN);
-  */
+    // MQTT
+    if (!client.connected()) reconnect();
+    client.loop();
 
-  // --- SIMULACION DE DATOS (HARDCODING) ---
-  // Cambia estos valores manuales para probar tus alertas
-  humedad = 25;  // < 30 para probar la alerta
-  pir = 1;       // 1 detectó movimiento
-  luminosidad = 800; 
+    // ----------------------------------------------------------
+    // VALORES SIMULADOS (HARDCODED)
+    // ----------------------------------------------------------
+    humedad = 25;       // Simula suelo seco
+    pir = 1;            // Simula movimiento detectado
+    luminosidad = 800;  // Simula luz alta
+    temperatura = 24.5; // <--- VALOR FIJO PARA TEMPERATURA
 
-  Serial.print("Enviando -> Humedad: ");
-  Serial.print(humedad);
-  Serial.print("% | PIR: ");
-  Serial.println(pir);
+    /* NOTA: Cuando conectes el sensor real, descomenta esto:
+       float t_real = dht.readTemperature();
+       if (!isnan(t_real)) temperatura = t_real;
+    */
 
-  // -------------------------------------------------------------------------------------------
-  // ENVIO DE DATOS JSON (ArduinoJson v7)
-  // En la version 7 ya no se usa StaticJsonDocument<Tamano>, solo JsonDocument.
-  // La memoria se gestiona sola.
-  // -------------------------------------------------------------------------------------------
+    Serial.print("Enviando -> Humedad: ");
+    Serial.print(humedad);
+    Serial.print("% | Temp: ");
+    Serial.print(temperatura);
+    Serial.println("C");
 
-  // 1. Humedad
-  JsonDocument humedadDoc;
-  humedadDoc["valor"] = humedad; // No necesitas convertir a String, ArduinoJson lo maneja
-  humedadDoc["unidad"] = "%";
-  char humedadPayload[100];
-  serializeJson(humedadDoc, humedadPayload);
-  client.publish("sensores/humedad", humedadPayload);
+    // ----------------------------------------------------------
+    // ENVIAR POR MQTT
+    // ----------------------------------------------------------
+    JsonDocument doc;
 
-  // 2. Luminosidad
-  JsonDocument LuminosidadDoc;
-  LuminosidadDoc["valor"] = luminosidad;
-  LuminosidadDoc["unidad"] = "LX";
-  char luzPayload[100];
-  serializeJson(LuminosidadDoc, luzPayload);
-  client.publish("sensores/luz", luzPayload);
+    // 1. HUMEDAD
+    doc["valor"] = humedad;
+    doc["unidad"] = "%";
+    char humPayload[90];
+    serializeJson(doc, humPayload);
+    client.publish("sensores/humedad", humPayload);
 
-  // 3. PIR (Movimiento)
-  JsonDocument pirDoc;
-  pirDoc["valor"] = pir;
-  pirDoc["unidad"] = "";
-  char pirPayload[100];
-  serializeJson(pirDoc, pirPayload);
-  client.publish("sensores/pir", pirPayload);
+    // 2. TEMPERATURA (NUEVO)
+    doc.clear();
+    doc["valor"] = temperatura;
+    doc["unidad"] = "C";
+    char tempPayload[90];
+    serializeJson(doc, tempPayload);
+    client.publish("sensores/temperatura", tempPayload);
 
-  // Esperar 5 segundos antes de la siguiente lectura
-  delay(5000);
+    // 3. LUZ
+    doc.clear();
+    doc["valor"] = luminosidad;
+    doc["unidad"] = "LX";
+    char luzPayload[90];
+    serializeJson(doc, luzPayload);
+    client.publish("sensores/luz", luzPayload);
+
+    // 4. PIR
+    doc.clear();
+    doc["valor"] = pir;
+    doc["unidad"] = "";
+    char pirPayload[90];
+    serializeJson(doc, pirPayload);
+    client.publish("sensores/pir", pirPayload);
+
+    delay(5000); // Espera 5 segundos entre envíos
 }

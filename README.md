@@ -1,141 +1,160 @@
-# 🌿 Sistema IoT de Monitoreo de Plantas (Fog-to-Cloud)
+# 🌿 Sistema IoT de Monitoreo de Plantas (Full Stack Local)
 
-Este proyecto implementa una arquitectura completa de IoT para el monitoreo de condiciones ambientales en plantas. Utiliza un enfoque de **Niebla a Nube (Fog to Cloud)**, integrando microcontroladores, contenedores Docker, servicios de mensajería y almacenamiento en la nube.
+Este proyecto implementa una solución completa de IoT para el monitoreo de condiciones ambientales en plantas. A diferencia de soluciones básicas, este proyecto integra un **Servidor Web embebido en el ESP32** con un Dashboard profesional, backend en **Python**, base de datos de series temporales **InfluxDB** y visualización histórica con **Grafana**, todo orquestado mediante **Docker**.
+
+---
 
 ## 🚀 Arquitectura del Sistema
 
-1. **Capa Física (Edge):** ESP32 simulando sensores de Humedad, Luz y Movimiento (PIR).
-2. **Capa de Comunicaciones:** Protocolo MQTT sobre WiFi.
-3. **Capa de Niebla/Servidor (Backend Dockerizado):**
-   * **Broker:** Eclipse Mosquitto.
-   * **Lógica de Negocio (Python):** Microservicio modular para procesamiento de datos.
-   * **Notificaciones:** Servidor WebSocket para alertas en tiempo real.
-4. **Capa de Nube:** InfluxDB Cloud para almacenamiento de series de tiempo.
+### 1. Capa Física (Edge - ESP32)
+- Lectura de sensores: Humedad (YL-69), Temperatura (DHT11), Luz (LDR), Movimiento (PIR)
+- **Hosting Web:** El ESP32 aloja el Frontend (`index.html`, `styles.css`) en su memoria SPIFFS
+- **Comunicación:** Envía datos por MQTT y recibe actualizaciones en tiempo real por WebSockets
+
+### 2. Capa de Comunicaciones
+- Protocolo MQTT (Eclipse Mosquitto)
+
+### 3. Capa de Procesamiento (Backend)
+- Servicio en Python que procesa mensajes MQTT
+- Guarda datos históricos en InfluxDB
+- Gestiona alertas y las envía al Dashboard vía WebSockets
+
+### 4. Capa de Datos y Visualización
+- **InfluxDB (v1.8):** Almacenamiento local de datos
+- **Grafana:** Generación de gráficos históricos incrustados en el Dashboard principal
 
 ---
 
 ## 📋 Requisitos Previos
 
-Antes de arrancar, asegúrate de tener instalado:
-
-* [Visual Studio Code](https://code.visualstudio.com/)
-* **Extensión PlatformIO** (dentro de VS Code).
-* [Docker Desktop](https://www.docker.com/products/docker-desktop/) (debe estar corriendo).
-* [Python 3.9+](https://www.python.org/) (solo para ejecutar el test de cliente localmente).
+- [Visual Studio Code](https://code.visualstudio.com/) + Extensión **PlatformIO**
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/) (debe estar corriendo)
+- Hardware ESP32 y sensores (DHT11, LDR, PIR, YL-69)
 
 ---
 
-## ⚙️ Configuración (Paso a Paso)
+## ⚙️ Instalación y Configuración (Paso a Paso)
 
-### 1. Configuración de Credenciales (Backend)
+### 1️⃣ Preparar el Entorno (Docker)
 
-El proyecto utiliza variables de entorno para proteger las credenciales. Crea un archivo llamado `.env` en la raíz del proyecto (junto a `platformio.ini`) con el siguiente contenido:
+Toda la infraestructura de servidores corre en contenedores. No necesitas instalar Python ni bases de datos en tu PC.
 
-**Archivo: `.env`**
-```ini
-# --- Configuración MQTT (Interna de Docker) ---
-MQTT_BROKER_HOST=mosquitto
-MQTT_PORT=1883
+1. Abre una terminal en la carpeta del proyecto
+2. Construye y levanta los servicios:
+   ```bash
+   docker-compose up -d --build
+   ```
+3. Verifica que los 4 servicios estén corriendo (`mosquitto`, `backend`, `influxdb`, `grafana`)
 
-# --- Configuración InfluxDB (Nube) ---
-INFLUXDB_URL=https://us-east-1-1.aws.cloud2.influxdata.com/
-# IMPORTANTE: Usar el ID de Organización (Hexadecimal), NO el correo.
-INFLUXDB_ORG=TU_ORG_ID_AQUI
-INFLUXDB_BUCKET=humedad_data
-# Token con permisos de ESCRITURA (Write)
-INFLUXDB_TOKEN=TU_TOKEN_ALL_ACCESS==
-```
+---
 
-### 2. Configuración del Hardware (ESP32)
+### 2️⃣ Configurar Grafana (Visualización Histórica)
 
-Las credenciales de WiFi y la IP de tu computadora (donde corre el Broker) se inyectan al compilar. Edita el archivo `platformio.ini`:
+Este paso es manual y se hace una sola vez para generar la gráfica:
 
-**Archivo: `platformio.ini`**
+1. Entra a `http://localhost:3000` (Usuario/Pass: `admin`/`admin`)
+2. Ve a **Connections → Data Sources** y agrega **InfluxDB**
+   - **URL:** `http://influxdb:8086`
+   - **Database:** `iot_data`
+   - Click en "Save & Test"
+3. Crea un nuevo **Dashboard**, agrega un panel y selecciona la métrica (ej. `humedad`)
+4. Haz click en el título del panel → **Share → Embed**
+5. **⚠️ IMPORTANTE:** Copia la URL del `src` y cambia `localhost` por la IP de tu computadora (ej. `192.168.1.212`)
+6. Pega esa URL en el archivo `data/index.html` (línea del `iframe`)
+
+---
+
+### 3️⃣ Configurar Firmware (ESP32)
+
+Edita el archivo `platformio.ini` para configurar tu red y particiones:
+
 ```ini
 [env:esp32doit-devkit-v1]
 platform = espressif32
 board = esp32doit-devkit-v1
 framework = arduino
 monitor_speed = 115200
-lib_deps =
-    knolleary/PubSubClient
-    bblanchon/ArduinoJson
-    adafruit/DHT sensor library
-    adafruit/Adafruit Unified Sensor
+board_build.partitions = min_spiffs.csv  ; ⚠️ CRÍTICO PARA EL HTML
+
 build_flags =
-    '-D WIFI_SSID="NOMBRE_DE_TU_RED_WIFI"'
-    '-D WIFI_PASS="TU_CONTRASEÑA_WIFI"'
-    '-D MQTT_SERVER="192.168.1.XX"'  ; <--- IMPORTANTE: Pon la IP local de tu PC (ipconfig/ifconfig)
+    '-D WIFI_SSID="TU_WIFI"'
+    '-D WIFI_PASS="TU_CONTRASEÑA"'
+    '-D MQTT_SERVER="IP_DE_TU_PC"'      ; Ej: 192.168.1.212
 ```
 
-### 3. 🐳 Arrancar el Servidor (Docker)
+---
 
-No necesitas instalar librerías de Python ni configurar Mosquitto manualmente en tu sistema operativo. Docker se encarga de todo el entorno.
+### 4️⃣ Cargar Código y Archivos al ESP32
 
-1. Abre una terminal en la raíz del proyecto.
-2. Ejecuta el siguiente comando para construir y levantar los servicios:
-```bash
-docker-compose up --build
-```
+Este proyecto requiere dos subidas distintas: una para el código (C++) y otra para la página web (HTML/CSS).
 
-Deberías ver en los logs:
+#### Paso A: Subir el Firmware (Código)
 
-* `mosquitto`: Iniciando en puerto 1883.
-* `backend`: Conectado exitosamente al Broker y listo para recibir datos.
+1. Conecta el ESP32
+2. En PlatformIO, presiona **Upload** (Flecha derecha →)
 
-### 4. ⚡ Cargar Código al ESP32
+#### Paso B: Subir el Dashboard (HTML/CSS)
 
-1. Conecta tu ESP32 por USB a la computadora.
-2. Asegúrate de que tu PC y el ESP32 estén conectados a la misma red WiFi.
-3. En PlatformIO (VS Code), presiona el botón de **Upload** (Flecha Derecha) en la barra inferior.
-4. Una vez cargado, abre el **Monitor Serie** (Enchufe) para verificar la conexión.
+Este paso guarda la carpeta `data/` en la memoria del ESP32.
 
-**Nota:** Actualmente el código en `src/main.cpp` tiene valores simulados ("hardcodeados") para probar las alertas sin sensores físicos.
+1. Abre la terminal de PlatformIO en VS Code
+2. Ejecuta el comando:
+   ```bash
+   pio run -t uploadfs
+   ```
+   *(Si falla por puerto ocupado, agrega `--upload-port COMx`)*
 
-### 5. 🧪 Pruebas de Integración (Simulación de Cliente)
+---
 
-Para verificar que las alertas en tiempo real funcionan sin tener un Frontend desarrollado:
+## 🖥️ Uso del Dashboard
 
-1. Abre una nueva terminal (sin cerrar Docker).
-2. Instala la librería de websockets localmente (si no la tienes):
-```bash
-pip install websockets
-```
-
-3. Ejecuta el cliente de prueba WebSocket:
-```bash
-python python_service/wsocketclient_test.py
-```
-
-Si el ESP32 envía un valor de humedad < 30%, verás la alerta llegar instantáneamente a esta terminal.
+1. Abre el **Monitor Serie** en VS Code y resetea el ESP32
+2. Copia la dirección IP que aparece (ej. `IP del ESP32: 192.168.1.89`)
+3. Abre esa IP en tu navegador web
+4. **¡Listo!** Verás los valores en tiempo real y la gráfica histórica de Grafana
 
 ---
 
 ## 📂 Estructura del Proyecto
+
 ```
 IoT_Plantas/
-├── .env                    # Variables de entorno (NO SUBIR A GIT)
-├── docker-compose.yml      # Orquestador de contenedores
-├── platformio.ini          # Configuración del ESP32 y Librerías
+├── docker-compose.yml          # Orquestador (MQTT, Python, InfluxDB, Grafana)
+├── platformio.ini              # Configuración ESP32
+├── data/                       # Archivos Web (Se suben al ESP32)
+│   ├── index.html              # Dashboard Principal
+│   └── styles.css              # Estilos Dark Mode
 ├── mosquitto/
-│   └── config/mosquitto.conf
-├── python_service/         # Microservicio de Backend Modular
+│   └── config/
+│       └── mosquitto.conf
+├── python_service/             # Backend Lógico
 │   ├── Dockerfile
-│   ├── requirements.txt
-│   ├── main.py             # Orquestador del servicio
-│   ├── database.py         # Módulo de InfluxDB
-│   ├── ws_manager.py       # Módulo de WebSockets
-│   └── wsocketclient_test.py # Script de prueba (Cliente)
+│   ├── main.py                 # Procesa MQTT y envía WebSockets
+│   ├── database.py             # Conector a InfluxDB
+│   ├── ws_manager.py           # Gestor de conexiones WS
+│   └── requirements.txt
 └── src/
-    └── main.cpp            # Firmware C++ del ESP32
+    └── main.cpp                # Código C++ del ESP32
 ```
 
 ---
 
-**Autores:** 
-* Diego Alcantar
-* Fabricio Aldaco
-* Pablo Galán
-* Manuel Perez
-* Raul Verduzco
-**Curso:** Introducción al Internet de las Cosas
+## 🛠️ Solución de Problemas Comunes
+
+| Problema | Solución |
+|----------|----------|
+| **Pantalla blanca en el navegador** | Olvidaste subir el sistema de archivos. Ejecuta `pio run -t uploadfs` |
+| **Valores en "--" o "Desconectado"** | Verifica que el servicio de Python esté corriendo y que la IP en `index.html` (`wsUrl`) sea la correcta de tu PC |
+| **Gráfica con icono roto** | Asegúrate de haber cambiado `localhost` por tu IP real en el `src` del `iframe` dentro de `index.html` |
+
+---
+
+## 👥 Autores
+
+- Diego Alcantar
+- Fabricio Aldaco
+- Pablo Galán
+- Manuel Perez
+- Raul Verduzco
+
+---
