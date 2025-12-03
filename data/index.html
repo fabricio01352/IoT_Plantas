@@ -39,15 +39,15 @@
                 <p class="subtitle" id="status-temp">Ambiente</p>
             </div>
 
-            <div class="card">
+            <div class="card" id="card-luz">
                 <h3>☀️ Luminosidad</h3>
                 <div class="value-container">
                     <span id="val-luz">--</span><span class="unit">lx</span>
                 </div>
-                <p class="subtitle">Sensor LDR</p>
+                <p class="subtitle" id="status-luz">Sensor LDR</p>
             </div>
 
-            <div class="card">
+            <div class="card" id="card-pir">
                 <h3>👀 Último Movimiento</h3>
                 <div class="value-text" id="val-pir">
                     Sin detección reciente
@@ -55,11 +55,141 @@
                 <p class="subtitle">Registro de actividad</p>
             </div>
 
+            <!-- === KPI 6: EXTREMOS DEL DÍA === -->
             <div class="card wide-card">
-                <h3>Grafica Humedad</h3>
+                <h3>📊 Extremos del Día (Últimas 24h)</h3>
+                <div class="extremos-grid">
+                    <div class="extremo-item">
+                        <span class="extremo-label">Humedad Máx:</span>
+                        <span class="extremo-value" id="kpi6-hum-max">--</span><span class="unit">%</span>
+                    </div>
+                    <div class="extremo-item">
+                        <span class="extremo-label">Humedad Mín:</span>
+                        <span class="extremo-value" id="kpi6-hum-min">--</span><span class="unit">%</span>
+                    </div>
+                    <div class="extremo-item">
+                        <span class="extremo-label">Temp Máx:</span>
+                        <span class="extremo-value" id="kpi6-temp-max">--</span><span class="unit">°C</span>
+                    </div>
+                    <div class="extremo-item">
+                        <span class="extremo-label">Temp Mín:</span>
+                        <span class="extremo-value" id="kpi6-temp-min">--</span><span class="unit">°C</span>
+                    </div>
+                </div>
+                <div class="grafana-container" style="margin-top: 15px;">
+                    <iframe 
+                        src="http://localhost:3000/d-solo/adn8fg2/extremos-dia?orgId=1&from=now-6h&to=now&timezone=browser&theme=dark&panelId=panel-1" 
+                        width="100%" 
+                        height="250" 
+                        frameborder="0">
+                    </iframe>
+                </div>
+            </div>
+
+            <!-- === KPI 7: HORAS EN ESTRÉS === -->
+            <div class="card wide-card">
+                <h3>⏱️ Horas en Condición de Estrés (24h)</h3>
+                <div class="estres-grid">
+                    <div class="estres-item">
+                        <span class="estres-label">Humedad Crítica:</span>
+                        <span class="estres-value" id="kpi7-hum">0</span><span class="unit">h</span>
+                    </div>
+                    <div class="estres-item">
+                        <span class="estres-label">Temperatura Crítica:</span>
+                        <span class="estres-value" id="kpi7-temp">0</span><span class="unit">h</span>
+                    </div>
+                    <div class="estres-item">
+                        <span class="estres-label">Poca Luz:</span>
+                        <span class="estres-value" id="kpi7-luz">0</span><span class="unit">h</span>
+                    </div>
+                </div>
+                <div class="grafana-container" style="margin-top: 15px;">
+                    <iframe 
+                        src="http://localhost:3000/d-solo/adlhh2r/horas-estre?orgId=1&from=now-6h&to=now&timezone=browser&theme=dark&panelId=panel-1" 
+                        width="100%" 
+                        height="250" 
+                        frameborder="0">
+                    </iframe>
+                </div>
+            </div>
+
+            <!-- === KPI 8: TASA DE SECADO === -->
+            <div class="card">
+                <h3>💨 Tasa de Secado</h3>
+                <div class="value-container">
+                    <span id="kpi8-tasa">--</span><span class="unit">%/día</span>
+                </div>
+                <p class="subtitle" id="kpi8-status">Velocidad de cambio</p>
+            </div>
+
+            <!-- === KPI 8: GRÁFICA TASA DE SECADO === -->
+            <div class="card wide-card">
+                <h3>💨 Tendencia de Tasa de Secado</h3>
+                <div class="grafana-container">
+                    <iframe 
+                        src="http://localhost:3000/d-solo/adppr4r/tasa-secadp?orgId=1&from=now-6h&to=now&timezone=browser&theme=dark&panelId=panel-1" 
+                        width="100%" 
+                        height="250" 
+                        frameborder="0">
+                    </iframe>
+                </div>
+            </div>
+
+            <!-- === KPI 9: ESTADO DEL DISPOSITIVO === -->
+            <div class="card" id="card-conexion">
+                <h3>📡 Estado del Dispositivo</h3>
+                <div class="value-text" id="kpi9-tiempo">
+                    Calculando...
+                </div>
+                <p class="subtitle" id="kpi9-status">Última conexión</p>
+            </div>
+
+            <!-- === KPI 9: GRÁFICA ESTADO DISPOSITIVO === -->
+            <div class="card wide-card">
+                <h3>📡 Historial de Conexión</h3>
+                <div class="grafana-container">
+                    <iframe 
+                        src="http://localhost:3000/d-solo/ad8md5s/estado-dispositivo?orgId=1&from=now-6h&to=now&timezone=browser&theme=dark&panelId=panel-1" 
+                        width="100%" 
+                        height="250" 
+                        frameborder="0">
+                    </iframe>
+                </div>
+            </div>
+
+            <!-- === KPI 10: FRECUENCIA DE ALERTAS === -->
+            <div class="card">
+                <h3>🔔 Frecuencia de Alertas</h3>
+                <div class="alertas-container">
+                    <div class="alerta-item">
+                        <span class="alerta-label">Humedad Crítica (7d):</span>
+                        <span class="alerta-value" id="kpi10-hum">0</span>
+                    </div>
+                    <div class="alerta-item">
+                        <span class="alerta-label">Movimientos (24h):</span>
+                        <span class="alerta-value" id="kpi10-pir">0</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- === KPI 10: GRÁFICA FRECUENCIA ALERTAS === -->
+            <div class="card wide-card">
+                <h3>🔔 Historial de Alertas</h3>
+                <div class="grafana-container">
+                    <iframe 
+                        src="http://localhost:3000/d-solo/adpwcnj/frecuencia-alertas?orgId=1&from=now-6h&to=now&timezone=browser&theme=dark&panelId=panel-1" 
+                        width="100%" 
+                        height="250" 
+                        frameborder="0">
+                    </iframe>
+                </div>
+            </div>
+
+            <div class="card wide-card">
+                <h3>💧 Gráfica Humedad</h3>
                 <div class="grafana-container">
                     <iframe
-                        src="http://192.168.1.212:3000/d-solo/adfsv7j/plantas?orgId=1&timezone=browser&refresh=5s&theme=dark&panelId=panel-1&__feature.dashboardSceneSolo=true"
+                        src="http://192.168.1.90:3000/d-solo/adfsv7j/plantas?orgId=1&timezone=browser&refresh=5s&theme=dark&panelId=panel-1&__feature.dashboardSceneSolo=true"
                         width="100%" height="200" frameborder="0">
                     </iframe>
                 </div>
@@ -68,9 +198,8 @@
             <div class="card wide-card">
                 <h3>🌡️ Tendencia de Temperatura (Histórico)</h3>
                 <div class="grafana-container">
-                    <!-- PEGA AQUÍ TU LINK DE GRAFANA DE TEMPERATURA -->
                     <iframe 
-                        src="http://192.168.1.212:3000/d-solo/ad4fffw/tendencia-temperatura?orgId=1&from=1764721726063&to=1764743326063&timezone=browser&theme=dark&panelId=panel-1&__feature.dashboardSceneSolo=true" 
+                        src="http://192.168.1.90:3000/d-solo/ad4fffw/tendencia-temperatura?orgId=1&from=1764721726063&to=1764743326063&timezone=browser&theme=dark&panelId=panel-1&__feature.dashboardSceneSolo=true" 
                         width="100%" 
                         height="250" 
                         frameborder="0">
@@ -81,12 +210,8 @@
             <div class="card wide-card">
                 <h3>📊 Análisis de Correlación (Humedad vs Temperatura)</h3>
                 <div class="grafana-container">
-                    <!-- 
-                        PEGA AQUÍ TU LINK DE GRAFANA COMBINADO 
-                        Recuerda: Esta gráfica debe tener 2 líneas (Humedad y Temp)
-                    -->
                     <iframe 
-                        src="http://192.168.1.212:3000/d-solo/ad8b667/humedad-y-temperatura?orgId=1&from=1764722404330&to=1764744004330&timezone=browser&theme=dark&panelId=panel-1&__feature.dashboardSceneSolo=true" 
+                        src="http://192.168.1.90:3000/d-solo/ad8b667/humedad-y-temperatura?orgId=1&from=1764722404330&to=1764744004330&timezone=browser&theme=dark&panelId=panel-1&__feature.dashboardSceneSolo=true" 
                         width="100%" 
                         height="300" 
                         frameborder="0">
@@ -96,13 +221,13 @@
                     Comparativa para identificar patrones de secado.
                 </p>
             </div>
+
             <!-- === NUEVA GRÁFICA: KPI 4 LUMINOSIDAD === -->
             <div class="card wide-card">
                 <h3>☀️ Ciclo de Iluminación (Día/Noche)</h3>
                 <div class="grafana-container">
-                    <!-- PEGA AQUÍ TU LINK DE GRAFANA DE LUZ -->
                     <iframe 
-                        src="http://192.168.1.212:3000/d-solo/ad47l67/historial-luz?orgId=1&from=1764722780968&to=1764744380968&timezone=browser&theme=dark&panelId=panel-1&__feature.dashboardSceneSolo=true" 
+                        src="http://192.168.1.90:3000/d-solo/ad47l67/historial-luz?orgId=1&from=1764722780968&to=1764744380968&timezone=browser&theme=dark&panelId=panel-1&__feature.dashboardSceneSolo=true" 
                         width="100%" 
                         height="250" 
                         frameborder="0">
@@ -114,9 +239,8 @@
             <div class="card wide-card">
                 <h3>🛡️ Registro de Seguridad (Últimos Movimientos)</h3>
                 <div class="grafana-container">
-                    <!-- PEGA AQUÍ TU LINK DE LA TABLA DE GRAFANA -->
                     <iframe 
-                        src="http://192.168.1.212:3000/d-solo/adhljrm/pir?orgId=1&from=1764723280754&to=1764744880754&timezone=browser&theme=dark&panelId=panel-1&__feature.dashboardSceneSolo=true" 
+                        src="http://192.168.1.90:3000/d-solo/adhljrm/pir?orgId=1&from=1764723280754&to=1764744880754&timezone=browser&theme=dark&panelId=panel-1&__feature.dashboardSceneSolo=true" 
                         width="100%" 
                         height="250" 
                         frameborder="0">
@@ -128,7 +252,7 @@
 
     <script>
         // CONFIGURACIÓN WEBSOCKET
-        const wsUrl = 'ws://192.168.1.212:8765';
+        const wsUrl = 'ws://192.168.1.90:8765';
         let socket;
 
         function connectWebSocket() {
@@ -179,20 +303,17 @@
                 const statusTemp = document.getElementById('status-temp');
 
                 if (temp < 15) {
-                    // CRÍTICO FRÍO (< 15°C) -> Borde Azul
                     cardTemp.style.border = "2px solid #33b5e5";
                     statusTemp.innerText = "¡Riesgo de Frío!";
                     statusTemp.style.color = "#33b5e5";
                 } else if (temp > 28) {
-                    // CRÍTICO CALOR (> 28°C) -> Borde Rojo
                     cardTemp.style.border = "2px solid #ff4444";
                     statusTemp.innerText = "¡Calor Excesivo!";
                     statusTemp.style.color = "#ff4444";
                 } else {
-                    // ÓPTIMO (15-28°C) -> Borde Normal
                     cardTemp.style.border = "1px solid #333";
                     statusTemp.innerText = "Temperatura Óptima";
-                    statusTemp.style.color = "#666"; // Color gris normal
+                    statusTemp.style.color = "#666";
                 }
             }
 
@@ -201,55 +322,135 @@
                 const luz = data.luz;
                 document.getElementById('val-luz').innerText = luz;
                 
-                const statusLuz = document.getElementById('status-luz'); // Asegúrate que tu HTML tenga este ID en el <p> de la tarjeta
-                const cardLuz = document.getElementById('card-luz'); // Asegúrate de agregar id="card-luz" al div de la tarjeta
+                const statusLuz = document.getElementById('status-luz');
+                const cardLuz = document.getElementById('card-luz');
                 
-                // Lógica Visual
                 if(luz < 300) {
                     statusLuz.innerText = "🌑 Oscuridad";
-                    cardLuz.style.border = "1px solid #555"; // Gris oscuro
+                    cardLuz.style.border = "1px solid #555";
                 } else if (luz > 2000) {
                     statusLuz.innerText = "☀️ Luz Directa (Alta)";
-                    cardLuz.style.border = "2px solid #ffbb33"; // Amarillo brillante
+                    cardLuz.style.border = "2px solid #ffbb33";
                 } else {
                     statusLuz.innerText = "☁️ Luz Indirecta (Óptima)";
-                    cardLuz.style.border = "2px solid #00C851"; // Verde
+                    cardLuz.style.border = "2px solid #00C851";
                 }
             }
 
             // KPI 5: PIR (Movimiento)
             if(data.pir !== undefined) {
                 const pirVal = data.pir;
-                const cardPir = document.getElementById('card-pir'); // Asegúrate de tener id="card-pir" en el div
+                const cardPir = document.getElementById('card-pir');
                 
                 if (pirVal === 1) {
-                    // SI HAY MOVIMIENTO:
                     const now = new Date();
-                    // Actualizamos la hora de la "Última detección"
                     document.getElementById('val-pir').innerText = now.toLocaleTimeString();
                     
-                    // Efecto visual: Cambiar fondo a rojo oscuro momentáneamente
                     cardPir.style.backgroundColor = "#b71c1c"; 
                     cardPir.style.border = "2px solid #ff4444";
                 } else {
-                    // SI NO HAY MOVIMIENTO (Regresa a la normalidad)
-                    cardPir.style.backgroundColor = "#1e1e1e"; // Color original
+                    cardPir.style.backgroundColor = "#1e1e1e";
                     cardPir.style.border = "1px solid #333";
                 }
             }
 
-            // MANEJO DE ALERTAS (Corregido para evitar parpadeo)
-            // Solo actuamos si el JSON trae explícitamente la clave "alerta"
+            // MANEJO DE ALERTAS
             if (data.alerta !== undefined) {
                 const alertBox = document.getElementById('alert-container');
                 if (data.alerta !== "") {
-                    // Si hay texto de alerta, mostramos el cuadro
                     alertBox.classList.remove('hidden');
                     document.getElementById('alert-message').innerText = "⚠️ " + data.alerta;
                 } else {
-                    // Si la alerta viene vacía (humedad normal), ocultamos
                     alertBox.classList.add('hidden');
                 }
+            }
+
+            // KPI 6: Extremos del Día
+            if (data.kpi6 !== undefined) {
+                const kpi6 = data.kpi6;
+                if (kpi6.humedad_max !== null) {
+                    document.getElementById('kpi6-hum-max').innerText = kpi6.humedad_max;
+                }
+                if (kpi6.humedad_min !== null) {
+                    document.getElementById('kpi6-hum-min').innerText = kpi6.humedad_min;
+                }
+                if (kpi6.temperatura_max !== null) {
+                    document.getElementById('kpi6-temp-max').innerText = kpi6.temperatura_max;
+                }
+                if (kpi6.temperatura_min !== null) {
+                    document.getElementById('kpi6-temp-min').innerText = kpi6.temperatura_min;
+                }
+            }
+
+            // KPI 7: Horas en Estrés
+            if (data.kpi7 !== undefined) {
+                const kpi7 = data.kpi7;
+                document.getElementById('kpi7-hum').innerText = kpi7.horas_humedad_critica || 0;
+                document.getElementById('kpi7-temp').innerText = kpi7.horas_temperatura_critica || 0;
+                document.getElementById('kpi7-luz').innerText = kpi7.horas_poca_luz || 0;
+            }
+
+            // KPI 8: Tasa de Secado
+            if (data.kpi8 !== undefined) {
+                const tasa = data.kpi8.tasa_secado || 0;
+                document.getElementById('kpi8-tasa').innerText = tasa >= 0 ? `+${tasa}` : tasa;
+                
+                const statusEl = document.getElementById('kpi8-status');
+                if (tasa < -10) {
+                    statusEl.innerText = "⚠️ Secado rápido";
+                    statusEl.style.color = "#ff4444";
+                } else if (tasa < -5) {
+                    statusEl.innerText = "Secado moderado";
+                    statusEl.style.color = "#ffbb33";
+                } else if (tasa > 5) {
+                    statusEl.innerText = "Humedad aumentando";
+                    statusEl.style.color = "#00C851";
+                } else {
+                    statusEl.innerText = "Estable";
+                    statusEl.style.color = "#666";
+                }
+            }
+
+            // KPI 9: Estado del Dispositivo
+            if (data.kpi9 !== undefined && data.kpi9.ultima_conexion) {
+                const lastConn = new Date(data.kpi9.ultima_conexion);
+                const now = new Date();
+                const diffMs = now - lastConn;
+                const diffMins = Math.floor(diffMs / 60000);
+                const diffHours = Math.floor(diffMins / 60);
+                
+                const cardConexion = document.getElementById('card-conexion');
+                const tiempoEl = document.getElementById('kpi9-tiempo');
+                const statusEl = document.getElementById('kpi9-status');
+                
+                if (diffMins < 5) {
+                    tiempoEl.innerText = `Hace ${diffMins} min`;
+                    cardConexion.style.border = "2px solid #00C851";
+                    statusEl.innerText = "✅ Conectado";
+                    statusEl.style.color = "#00C851";
+                } else if (diffMins < 10) {
+                    tiempoEl.innerText = `Hace ${diffMins} min`;
+                    cardConexion.style.border = "2px solid #ffbb33";
+                    statusEl.innerText = "⚠️ Conexión lenta";
+                    statusEl.style.color = "#ffbb33";
+                } else if (diffMins < 60) {
+                    tiempoEl.innerText = `Hace ${diffMins} min`;
+                    cardConexion.style.border = "2px solid #ff8800";
+                    statusEl.innerText = "⚠️ Desconexión reciente";
+                    statusEl.style.color = "#ff8800";
+                } else {
+                    tiempoEl.innerText = diffHours > 1 ? `Hace ${diffHours}h` : `Hace ${diffMins} min`;
+                    cardConexion.style.border = "2px solid #ff4444";
+                    statusEl.innerText = "❌ Desconectado";
+                    statusEl.style.color = "#ff4444";
+                }
+            }
+
+            // KPI 10: Frecuencia de Alertas
+            if (data.kpi10 !== undefined) {
+                const kpi10 = data.kpi10;
+                document.getElementById('kpi10-hum').innerText = kpi10.alertas_humedad_7d || 0;
+                document.getElementById('kpi10-pir').innerText = kpi10.detecciones_pir_24h || 0;
             }
         }
 
