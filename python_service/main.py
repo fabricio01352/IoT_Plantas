@@ -114,9 +114,14 @@ def on_message(client, userdata, msg):
 
 async def calcular_y_enviar_kpis():
     """Tarea periódica que calcula y envía los KPIs 6-10 al frontend"""
+    # Enviar inmediatamente al inicio
+    first_run = True
+    
     while True:
         try:
-            await asyncio.sleep(30)  # Cada 30 segundos
+            if not first_run:
+                await asyncio.sleep(30)  # Cada 30 segundos después del primer envío
+            first_run = False
             
             # KPI 6: Extremos del día
             extremos = db_manager.get_extremos_24h()
@@ -150,6 +155,8 @@ async def calcular_y_enviar_kpis():
                 
         except Exception as e:
             print(f"[KPIs] Error calculando KPIs: {e}")
+            import traceback
+            traceback.print_exc()
 
 async def main():
     global main_loop
