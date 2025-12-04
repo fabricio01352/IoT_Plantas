@@ -112,6 +112,52 @@ def on_message(client, userdata, msg):
 # MAIN
 # -------------------------------------------------------------------------
 
+async def calcular_y_enviar_kpis():
+    """Tarea periódica que calcula y envía los KPIs 6-10 al frontend"""
+    # Enviar inmediatamente al inicio
+    first_run = True
+    
+    while True:
+        try:
+            if not first_run:
+                await asyncio.sleep(30)  # Cada 30 segundos después del primer envío
+            first_run = False
+            
+            # KPI 6: Extremos del día
+            extremos = db_manager.get_extremos_24h()
+            
+            # KPI 7: Horas en estrés
+            horas_estres = db_manager.get_horas_estres_24h()
+            
+            # KPI 8: Tasa de secado
+            tasa_secado = db_manager.get_tasa_secado()
+            
+            # KPI 9: Última conexión
+            ultima_conexion = db_manager.get_ultima_conexion()
+            
+            # KPI 10: Frecuencia de alertas
+            frecuencia_alertas = db_manager.get_frecuencia_alertas()
+            
+            # Combinamos todos los KPIs en un solo mensaje
+            kpis_payload = {
+                'kpi6': extremos,
+                'kpi7': horas_estres,
+                'kpi8': tasa_secado,
+                'kpi9': ultima_conexion,
+                'kpi10': frecuencia_alertas
+            }
+            
+            mensaje_ws = json.dumps(kpis_payload)
+            
+            if main_loop and main_loop.is_running():
+                await ws_manager.broadcast(mensaje_ws)
+                print("[KPIs] Enviados KPIs 6-10 al dashboard")
+                
+        except Exception as e:
+            print(f"[KPIs] Error calculando KPIs: {e}")
+            import traceback
+            traceback.print_exc()
+
 async def main():
     global main_loop
     main_loop = asyncio.get_running_loop()
@@ -131,6 +177,9 @@ async def main():
         mqtt_client.loop_start() 
     except Exception as e:
         print(f"[MQTT] Error de conexion: {e}")
+
+    # Iniciamos la tarea periódica de KPIs
+    asyncio.create_task(calcular_y_enviar_kpis())
 
     # Iniciamos el servidor WebSocket
     await ws_manager.start_server()

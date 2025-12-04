@@ -95,3 +95,98 @@ h3 { margin-top: 0; color: #aaa; font-size: 0.9em; text-transform: uppercase; }
     overflow: hidden;
     border-radius: 5px;
 }
+
+/* === ESTILOS PARA KPIs 6-10 === */
+
+/* KPI 6: Extremos del Día */
+.extremos-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 15px;
+    margin-top: 15px;
+}
+
+.extremo-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 10px;
+    background-color: #2a2a2a;
+    border-radius: 8px;
+}
+
+.extremo-label {
+    font-size: 0.75em;
+    color: #888;
+    margin-bottom: 5px;
+}
+
+.extremo-value {
+    font-size: 1.8em;
+    font-weight: bold;
+    color: #33b5e5;
+}
+
+/* KPI 7: Horas en Estrés */
+.estres-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 15px;
+    margin-top: 15px;
+}
+
+.estres-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 15px;
+    background-color: #2a2a2a;
+    border-radius: 8px;
+    border-left: 4px solid #ff4444;
+}
+
+.estres-label {
+    font-size: 0.8em;
+    color: #aaa;
+    margin-bottom: 8px;
+    text-align: center;
+}
+
+.estres-value {
+    font-size: 2em;
+    font-weight: bold;
+    color: #ff4444;
+}
+
+/* KPI 8: Tasa de Secado - usa value-container existente */
+
+/* KPI 9: Estado del Dispositivo - usa value-text existente */
+
+/* KPI 10: Frecuencia de Alertas */
+.alertas-container {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    margin-top: 15px;
+}
+
+.alerta-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px;
+    background-color: #2a2a2a;
+    border-radius: 8px;
+    border-left: 4px solid #ffbb33;
+}
+
+.alerta-label {
+    font-size: 0.9em;
+    color: #aaa;
+}
+
+.alerta-value {
+    font-size: 1.5em;
+    font-weight: bold;
+    color: #ffbb33;
+}
