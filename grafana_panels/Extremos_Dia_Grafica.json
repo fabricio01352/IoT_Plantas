@@ -1,0 +1,221 @@
+{
+  "id": 1,
+  "type": "timeseries",
+  "title": "📊 Extremos del Día (Gráfica)",
+  "gridPos": {
+    "x": 0,
+    "y": 0,
+    "h": 8,
+    "w": 12
+  },
+  "fieldConfig": {
+    "defaults": {
+      "custom": {
+        "drawStyle": "line",
+        "lineInterpolation": "linear",
+        "barAlignment": 0,
+        "barWidthFactor": 0.6,
+        "lineWidth": 2,
+        "fillOpacity": 20,
+        "gradientMode": "none",
+        "spanNulls": false,
+        "insertNulls": false,
+        "showPoints": "auto",
+        "showValues": false,
+        "pointSize": 5,
+        "stacking": {
+          "mode": "none",
+          "group": "A"
+        },
+        "axisPlacement": "auto",
+        "axisLabel": "",
+        "axisColorMode": "text",
+        "axisBorderShow": false,
+        "scaleDistribution": {
+          "type": "linear"
+        },
+        "axisCenteredZero": false,
+        "hideFrom": {
+          "tooltip": false,
+          "viz": false,
+          "legend": false
+        },
+        "thresholdsStyle": {
+          "mode": "off"
+        }
+      },
+      "color": {
+        "mode": "palette-classic"
+      },
+      "mappings": [],
+      "thresholds": {
+        "mode": "absolute",
+        "steps": [
+          {
+            "color": "green",
+            "value": null
+          }
+        ]
+      },
+      "unit": "short"
+    },
+    "overrides": [
+      {
+        "matcher": {
+          "id": "byName",
+          "options": "Humedad Máx"
+        },
+        "properties": [
+          {
+            "id": "unit",
+            "value": "percent"
+          },
+          {
+            "id": "color",
+            "value": {
+              "fixedColor": "#33b5e5",
+              "mode": "fixed"
+            }
+          },
+          {
+            "id": "custom.lineWidth",
+            "value": 2
+          }
+        ]
+      },
+      {
+        "matcher": {
+          "id": "byName",
+          "options": "Humedad Mín"
+        },
+        "properties": [
+          {
+            "id": "unit",
+            "value": "percent"
+          },
+          {
+            "id": "color",
+            "value": {
+              "fixedColor": "#ff4444",
+              "mode": "fixed"
+            }
+          },
+          {
+            "id": "custom.lineWidth",
+            "value": 2
+          }
+        ]
+      },
+      {
+        "matcher": {
+          "id": "byName",
+          "options": "Temp Máx"
+        },
+        "properties": [
+          {
+            "id": "unit",
+            "value": "celsius"
+          },
+          {
+            "id": "color",
+            "value": {
+              "fixedColor": "#ff8800",
+              "mode": "fixed"
+            }
+          },
+          {
+            "id": "custom.lineWidth",
+            "value": 2
+          }
+        ]
+      },
+      {
+        "matcher": {
+          "id": "byName",
+          "options": "Temp Mín"
+        },
+        "properties": [
+          {
+            "id": "unit",
+            "value": "celsius"
+          },
+          {
+            "id": "color",
+            "value": {
+              "fixedColor": "#33b5e5",
+              "mode": "fixed"
+            }
+          },
+          {
+            "id": "custom.lineWidth",
+            "value": 2
+          }
+        ]
+      }
+    ]
+  },
+  "pluginVersion": "12.3.0",
+  "targets": [
+    {
+      "datasource": {
+        "type": "influxdb",
+        "uid": "df616a1a2251cb"
+      },
+      "query": "SELECT MAX(\"value\") as \"Humedad Máx\" FROM \"humedad\" WHERE time > now() - 24h GROUP BY time(1h) fill(null)\n",
+      "rawQuery": true,
+      "refId": "A",
+      "resultFormat": "time_series"
+    },
+    {
+      "datasource": {
+        "type": "influxdb",
+        "uid": "df616a1a2251cb"
+      },
+      "hide": false,
+      "query": "SELECT MIN(\"value\") as \"Humedad Mín\" FROM \"humedad\" WHERE time > now() - 24h GROUP BY time(1h) fill(null)\n",
+      "rawQuery": true,
+      "refId": "B",
+      "resultFormat": "time_series"
+    },
+    {
+      "datasource": {
+        "type": "influxdb",
+        "uid": "df616a1a2251cb"
+      },
+      "hide": false,
+      "query": "SELECT MAX(\"value\") as \"Temp Máx\" FROM \"temperatura\" WHERE time > now() - 24h GROUP BY time(1h) fill(null)\n",
+      "rawQuery": true,
+      "refId": "C",
+      "resultFormat": "time_series"
+    },
+    {
+      "datasource": {
+        "type": "influxdb",
+        "uid": "df616a1a2251cb"
+      },
+      "hide": false,
+      "query": "SELECT MIN(\"value\") as \"Temp Mín\" FROM \"temperatura\" WHERE time > now() - 24h GROUP BY time(1h) fill(null)\n",
+      "rawQuery": true,
+      "refId": "D",
+      "resultFormat": "time_series"
+    }
+  ],
+  "datasource": {
+    "type": "influxdb",
+    "uid": "df616a1a2251cb"
+  },
+  "options": {
+    "tooltip": {
+      "mode": "multi",
+      "sort": "none",
+      "hideZeros": false
+    },
+    "legend": {
+      "showLegend": true,
+      "displayMode": "list",
+      "placement": "bottom",
+      "calcs": []
+    }
+  }
+}
+
