@@ -1,0 +1,423 @@
+{
+  "apiVersion": "dashboard.grafana.app/v1beta1",
+  "kind": "Dashboard",
+  "metadata": {
+    "name": "adwvr5f",
+    "namespace": "default",
+    "uid": "nI3jXwNqBNJUD9zo0FXxtyHKI9B5hhMHtaRWMnzQRD8X",
+    "resourceVersion": "1",
+    "generation": 7,
+    "creationTimestamp": "2025-12-05T06:01:11Z",
+    "labels": {
+      "grafana.app/deprecatedInternalID": "13"
+    },
+    "annotations": {
+      "grafana.app/createdBy": "user:bf61x1zfn0ruob",
+      "grafana.app/updatedBy": "user:bf61x1zfn0ruob",
+      "grafana.app/updatedTimestamp": "2025-12-05T06:01:11Z",
+      "grafana.app/saved-from-ui": "Grafana v12.3.0 (20051fb1fc)"
+    }
+  },
+  "spec": {
+    "annotations": {
+      "list": [
+        {
+          "builtIn": 1,
+          "datasource": {
+            "type": "grafana",
+            "uid": "-- Grafana --"
+          },
+          "enable": true,
+          "hide": true,
+          "iconColor": "rgba(0, 211, 255, 1)",
+          "name": "Annotations & Alerts",
+          "type": "dashboard"
+        }
+      ]
+    },
+    "editable": true,
+    "fiscalYearStartMonth": 0,
+    "graphTooltip": 0,
+    "id": 0,
+    "links": [],
+    "panels": [
+      {
+        "datasource": {
+          "type": "influxdb",
+          "uid": "af61ymq2xt0cge"
+        },
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "palette-classic"
+            },
+            "custom": {
+              "axisBorderShow": false,
+              "axisCenteredZero": false,
+              "axisColorMode": "text",
+              "axisLabel": "",
+              "axisPlacement": "auto",
+              "fillOpacity": 50,
+              "hideFrom": {
+                "legend": false,
+                "tooltip": false,
+                "viz": false
+              },
+              "pointShape": "circle",
+              "pointSize": {
+                "fixed": 12
+              },
+              "pointStrokeWidth": 1,
+              "scaleDistribution": {
+                "type": "linear"
+              },
+              "show": "points"
+            },
+            "mappings": [],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": 0
+                },
+                {
+                  "color": "red",
+                  "value": 80
+                }
+              ]
+            }
+          },
+          "overrides": []
+        },
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 0,
+          "y": 0
+        },
+        "id": 2,
+        "options": {
+          "legend": {
+            "calcs": [],
+            "displayMode": "list",
+            "placement": "bottom",
+            "showLegend": true
+          },
+          "mapping": "auto",
+          "series": [
+            {
+              "frame": {
+                "matcher": {
+                  "id": "byIndex",
+                  "options": 0
+                }
+              },
+              "x": {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Temp"
+                }
+              },
+              "y": {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Humedad"
+                }
+              }
+            }
+          ],
+          "tooltip": {
+            "hideZeros": false,
+            "mode": "single",
+            "sort": "none"
+          }
+        },
+        "pluginVersion": "12.3.0",
+        "targets": [
+          {
+            "query": "SELECT mean(\"value\") as \"Temp\" FROM \"temperatura\" WHERE $timeFilter GROUP BY time($agrupamiento)",
+            "rawQuery": true,
+            "refId": "A",
+            "resultFormat": "table"
+          },
+          {
+            "datasource": {
+              "type": "influxdb",
+              "uid": "af61ymq2xt0cge"
+            },
+            "hide": false,
+            "query": "SELECT mean(\"value\") as \"Humedad\" FROM \"humedad\" WHERE $timeFilter GROUP BY time($agrupamiento)",
+            "rawQuery": true,
+            "refId": "B",
+            "resultFormat": "table"
+          }
+        ],
+        "title": "Clustering (Temperatura vs Humedad)",
+        "transformations": [
+          {
+            "id": "joinByField",
+            "options": {}
+          }
+        ],
+        "type": "xychart"
+      },
+      {
+        "datasource": {
+          "type": "influxdb",
+          "uid": "af61ymq2xt0cge"
+        },
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "palette-classic"
+            },
+            "custom": {
+              "axisBorderShow": false,
+              "axisCenteredZero": false,
+              "axisColorMode": "text",
+              "axisLabel": "",
+              "axisPlacement": "auto",
+              "barAlignment": 0,
+              "barWidthFactor": 0.6,
+              "drawStyle": "line",
+              "fillOpacity": 0,
+              "gradientMode": "none",
+              "hideFrom": {
+                "legend": false,
+                "tooltip": false,
+                "viz": false
+              },
+              "insertNulls": false,
+              "lineInterpolation": "linear",
+              "lineWidth": 1,
+              "pointSize": 6,
+              "scaleDistribution": {
+                "type": "linear"
+              },
+              "showPoints": "auto",
+              "showValues": false,
+              "spanNulls": false,
+              "stacking": {
+                "group": "A",
+                "mode": "none"
+              },
+              "thresholdsStyle": {
+                "mode": "off"
+              }
+            },
+            "mappings": [],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": 0
+                },
+                {
+                  "color": "red",
+                  "value": 80
+                }
+              ]
+            }
+          },
+          "overrides": [
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "temperatura.Predicción"
+              },
+              "properties": []
+            },
+            {
+              "__systemRef": "hideSeriesFrom",
+              "matcher": {
+                "id": "byNames",
+                "options": {
+                  "mode": "exclude",
+                  "names": [
+                    "temperatura.Realidad"
+                  ],
+                  "prefix": "All except:",
+                  "readOnly": true
+                }
+              },
+              "properties": [
+                {
+                  "id": "custom.hideFrom",
+                  "value": {
+                    "legend": false,
+                    "tooltip": true,
+                    "viz": true
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        "gridPos": {
+          "h": 9,
+          "w": 13,
+          "x": 0,
+          "y": 8
+        },
+        "id": 1,
+        "options": {
+          "legend": {
+            "calcs": [],
+            "displayMode": "list",
+            "placement": "bottom",
+            "showLegend": true
+          },
+          "tooltip": {
+            "hideZeros": false,
+            "mode": "single",
+            "sort": "none"
+          }
+        },
+        "pluginVersion": "12.3.0",
+        "targets": [
+          {
+            "datasource": {
+              "type": "influxdb",
+              "uid": "af61ymq2xt0cge"
+            },
+            "hide": false,
+            "query": "SELECT mean(\"value\") as \"Realidad\" FROM \"temperatura\" WHERE $timeFilter GROUP BY time($__interval) fill(linear)",
+            "rawQuery": true,
+            "refId": "A",
+            "resultFormat": "time_series"
+          },
+          {
+            "datasource": {
+              "type": "influxdb",
+              "uid": "af61ymq2xt0cge"
+            },
+            "hide": false,
+            "query": "SELECT HOLT_WINTERS_WITH_FIT(mean(\"value\"), $prediccion, 5) as \"Predicción\" FROM \"temperatura\" WHERE $timeFilter GROUP BY time(10m)",
+            "rawQuery": true,
+            "refId": "B",
+            "resultFormat": "time_series"
+          }
+        ],
+        "title": "Horizonte de Prediccón (Inferencia)",
+        "type": "timeseries"
+      }
+    ],
+    "preload": false,
+    "schemaVersion": 42,
+    "tags": [],
+    "templating": {
+      "list": [
+        {
+          "current": {
+            "text": "100",
+            "value": "100"
+          },
+          "label": "Horizonte de Predicción",
+          "name": "prediccion",
+          "options": [
+            {
+              "selected": false,
+              "text": "10",
+              "value": "10"
+            },
+            {
+              "selected": false,
+              "text": "30",
+              "value": "30"
+            },
+            {
+              "selected": false,
+              "text": "60",
+              "value": "60"
+            },
+            {
+              "selected": true,
+              "text": "100",
+              "value": "100"
+            }
+          ],
+          "query": "10,30,60,100",
+          "type": "custom"
+        },
+        {
+          "auto": false,
+          "auto_count": 30,
+          "auto_min": "10s",
+          "current": {
+            "text": "1m",
+            "value": "1m"
+          },
+          "label": "Resolución del Cluster",
+          "name": "agrupamiento",
+          "options": [
+            {
+              "selected": true,
+              "text": "1m",
+              "value": "1m"
+            },
+            {
+              "selected": false,
+              "text": "10m",
+              "value": "10m"
+            },
+            {
+              "selected": false,
+              "text": "30m",
+              "value": "30m"
+            },
+            {
+              "selected": false,
+              "text": "1h",
+              "value": "1h"
+            },
+            {
+              "selected": false,
+              "text": "6h",
+              "value": "6h"
+            },
+            {
+              "selected": false,
+              "text": "12h",
+              "value": "12h"
+            },
+            {
+              "selected": false,
+              "text": "1d",
+              "value": "1d"
+            },
+            {
+              "selected": false,
+              "text": "7d",
+              "value": "7d"
+            },
+            {
+              "selected": false,
+              "text": "14d",
+              "value": "14d"
+            },
+            {
+              "selected": false,
+              "text": "30d",
+              "value": "30d"
+            }
+          ],
+          "query": "1m,10m,30m,1h,6h,12h,1d,7d,14d,30d",
+          "refresh": 2,
+          "type": "interval"
+        }
+      ]
+    },
+    "time": {
+      "from": "now-6h",
+      "to": "now"
+    },
+    "timepicker": {},
+    "timezone": "browser",
+    "title": "📊 Análisis Avanzado (Inferencia y Clustering)",
+    "uid": "adwvr5f",
+    "version": 7
+  },
+  "status": {}
+}

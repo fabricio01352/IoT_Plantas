@@ -168,45 +168,57 @@ void setup() {
 // -------------------------------------------------------------------------------------------
 
 void loop() {
-    // Servidor Web
     server.handleClient();
 
-    // MQTT
-    if (!client.connected()) reconnect();
-    client.loop();
+    if (!client.connected()) reconnect(); // Reconectar MQTT si cae
+    client.loop(); // Mantener MQTT vivo
+
+    // --- A) TEMPERATURA (DHT11) ---
+    float t_real = dht.readTemperature();
+    if (!isnan(t_real)) {
+        temperatura = t_real;
+    } else {
+        Serial.println("⚠️ Error leyendo DHT11");
+    }
+
+    // --- B) HUMEDAD DE SUELO (Analógico) ---
+    // El ESP32 lee de 0 a 4095. 
+    // Usualmente: 4095 = Aire (Seco), 0 = Agua (Mojado)
+    int lecturaRaw = analogRead(HUMEDAD_PIN);
+    
+    // Convertimos el valor crudo a porcentaje (0% a 100%)
+    humedad = map(lecturaRaw, 4095, 0, 0, 100); 
+    
+    // Limitamos para que no salga -5% o 105% por ruido
+    if (humedad < 0) humedad = 0;
+    if (humedad > 100) humedad = 100;
+
+    // Lee la cantidad de luz (0 a 4095)
+    luminosidad = analogRead(LDR_PIN);
+
+    // Lee 1 si hay movimiento, 0 si no
+    pir = digitalRead(PIR_PIN);
+
+
+    Serial.print("🌡️ Temp: "); Serial.print(temperatura); Serial.println(" °C");
+    Serial.print("💧 Humedad: "); Serial.print(humedad); Serial.println(" %");
+    Serial.print("💡 Luz: "); Serial.println(luminosidad);
+    Serial.print("🏃 PIR: "); Serial.println(pir);
+    Serial.println("--------------------------------");
 
     // ----------------------------------------------------------
-    // VALORES SIMULADOS (HARDCODED)
-    // ----------------------------------------------------------
-    humedad = 25;       // Simula suelo seco
-    pir = 1;            // Simula movimiento detectado
-    luminosidad = 800;  // Simula luz alta
-    temperatura = 24.5; // <--- VALOR FIJO PARA TEMPERATURA
-
-    /* NOTA: Cuando conectes el sensor real, descomenta esto:
-       float t_real = dht.readTemperature();
-       if (!isnan(t_real)) temperatura = t_real;
-    */
-
-    Serial.print("Enviando -> Humedad: ");
-    Serial.print(humedad);
-    Serial.print("% | Temp: ");
-    Serial.print(temperatura);
-    Serial.println("C");
-
-    // ----------------------------------------------------------
-    // ENVIAR POR MQTT
+    // 4. ENVIAR POR MQTT (JSON)
     // ----------------------------------------------------------
     JsonDocument doc;
 
-    // 1. HUMEDAD
+    // ENVÍO 1: HUMEDAD
     doc["valor"] = humedad;
     doc["unidad"] = "%";
     char humPayload[90];
     serializeJson(doc, humPayload);
     client.publish("sensores/humedad", humPayload);
 
-    // 2. TEMPERATURA (NUEVO)
+    // ENVÍO 2: TEMPERATURA
     doc.clear();
     doc["valor"] = temperatura;
     doc["unidad"] = "C";
@@ -214,21 +226,21 @@ void loop() {
     serializeJson(doc, tempPayload);
     client.publish("sensores/temperatura", tempPayload);
 
-    // 3. LUZ
+    // ENVÍO 3: LUZ
     doc.clear();
     doc["valor"] = luminosidad;
-    doc["unidad"] = "LX";
+    doc["unidad"] = "LX"; // O valor crudo (RAW)
     char luzPayload[90];
     serializeJson(doc, luzPayload);
     client.publish("sensores/luz", luzPayload);
 
-    // 4. PIR
+    // ENVÍO 4: PIR
     doc.clear();
     doc["valor"] = pir;
     doc["unidad"] = "";
     char pirPayload[90];
     serializeJson(doc, pirPayload);
     client.publish("sensores/pir", pirPayload);
-
-    delay(5000); // Espera 5 segundos entre envíos
+    
+    delay(5000); 
 }

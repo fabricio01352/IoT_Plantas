@@ -1,0 +1,168 @@
+{
+  "id": 1,
+  "type": "timeseries",
+  "title": "⏱️ Horas en Condición de Estrés (24h)",
+  "gridPos": {
+    "x": 0,
+    "y": 0,
+    "h": 8,
+    "w": 12
+  },
+  "fieldConfig": {
+    "defaults": {
+      "custom": {
+        "drawStyle": "line",
+        "lineInterpolation": "linear",
+        "barAlignment": 0,
+        "barWidthFactor": 0.6,
+        "lineWidth": 2,
+        "fillOpacity": 10,
+        "gradientMode": "none",
+        "spanNulls": false,
+        "insertNulls": false,
+        "showPoints": "never",
+        "showValues": false,
+        "pointSize": 5,
+        "stacking": {
+          "mode": "none",
+          "group": "A"
+        },
+        "axisPlacement": "auto",
+        "axisLabel": "",
+        "axisColorMode": "text",
+        "axisBorderShow": false,
+        "scaleDistribution": {
+          "type": "linear"
+        },
+        "axisCenteredZero": false,
+        "hideFrom": {
+          "tooltip": false,
+          "viz": false,
+          "legend": false
+        },
+        "thresholdsStyle": {
+          "mode": "off"
+        }
+      },
+      "color": {
+        "mode": "palette-classic"
+      },
+      "mappings": [],
+      "thresholds": {
+        "mode": "absolute",
+        "steps": [
+          {
+            "color": "green",
+            "value": null
+          }
+        ]
+      },
+      "unit": "h",
+      "decimals": 1
+    },
+    "overrides": [
+      {
+        "matcher": {
+          "id": "byName",
+          "options": "Horas Humedad Crítica"
+        },
+        "properties": [
+          {
+            "id": "color",
+            "value": {
+              "fixedColor": "#ff4444",
+              "mode": "fixed"
+            }
+          },
+          {
+            "id": "custom.axisLabel",
+            "value": "Horas"
+          }
+        ]
+      },
+      {
+        "matcher": {
+          "id": "byName",
+          "options": "Horas Temperatura Crítica"
+        },
+        "properties": [
+          {
+            "id": "color",
+            "value": {
+              "fixedColor": "#ff8800",
+              "mode": "fixed"
+            }
+          }
+        ]
+      },
+      {
+        "matcher": {
+          "id": "byName",
+          "options": "Horas Poca Luz"
+        },
+        "properties": [
+          {
+            "id": "color",
+            "value": {
+              "fixedColor": "#ffbb33",
+              "mode": "fixed"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "pluginVersion": "12.3.0",
+  "targets": [
+    {
+      "datasource": {
+        "type": "influxdb",
+        "uid": "df616a1a2251cb"
+      },
+      "query": "SELECT COUNT(\"value\")/12 as \"Horas Humedad Crítica\" FROM \"humedad\" WHERE time > now() - 24h AND \"value\" < 30 GROUP BY time(1h) fill(0)\n",
+      "rawQuery": true,
+      "refId": "A",
+      "resultFormat": "time_series"
+    },
+    {
+      "datasource": {
+        "type": "influxdb",
+        "uid": "df616a1a2251cb"
+      },
+      "hide": false,
+      "query": "SELECT COUNT(\"value\")/12 as \"Horas Temperatura Crítica\" FROM \"temperatura\" WHERE time > now() - 24h AND \"value\" > 28 GROUP BY time(1h) fill(0)\n",
+      "rawQuery": true,
+      "refId": "B",
+      "resultFormat": "time_series"
+    },
+    {
+      "datasource": {
+        "type": "influxdb",
+        "uid": "df616a1a2251cb"
+      },
+      "hide": false,
+      "query": "SELECT COUNT(\"value\")/12 as \"Horas Poca Luz\" FROM \"luz\" WHERE time > now() - 24h AND \"value\" < 300 GROUP BY time(1h) fill(0)\n",
+      "rawQuery": true,
+      "refId": "C",
+      "resultFormat": "time_series"
+    }
+  ],
+  "datasource": {
+    "type": "influxdb",
+    "uid": "df616a1a2251cb"
+  },
+  "options": {
+    "tooltip": {
+      "mode": "multi",
+      "sort": "none",
+      "hideZeros": false
+    },
+    "legend": {
+      "showLegend": true,
+      "displayMode": "list",
+      "placement": "bottom",
+      "calcs": []
+    }
+  }
+}
+
