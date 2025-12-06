@@ -25,27 +25,29 @@ WebServer server(80);
 const int mqtt_port = 1883;
 
 // -------------------------------------------------------------------------------------------
-// VARIABLES DE PRUEBA (sensores simulados)
+// VARIABLES GLOBALES (Para almacenar lecturas)
 // -------------------------------------------------------------------------------------------
 
-int humedad = 25;
-int pir = 0;
-int luminosidad = 500;
-float temperatura = 24.0; // <--- NUEVA VARIABLE PARA TEMP
+int humedadSuelo = 0;   // Humedad del suelo en %
+int luminosidad = 0;    // Luz en %
+int pir = 0;            // 0 o 1
+float temperatura = 0.0; 
+float humedadAire = 0.0; // Extra: Humedad del ambiente (DHT11)
 
 // -------------------------------------------------------------------------------------------
-// PINES
+// DEFINICIÓN DE PINES (HARDWARE REAL)
 // -------------------------------------------------------------------------------------------
-#define HUMEDAD_PIN 34
-#define LDR_PIN 32
-#define PIR_PIN 27
-#define DHTPIN 4      // Pin donde conectarás el DHT11 en el futuro
+#define LDR_PIN 32      // Módulo LDR
+#define DHTPIN 33       // DHT11 Data
+#define HUMEDAD_PIN 34  // Sensor Suelo (AO)
+#define PIR_PIN 35      // Sensor PIR
+
 #define DHTTYPE DHT11
 
-DHT dht(DHTPIN, DHTTYPE); // Inicializamos el objeto DHT
+DHT dht(DHTPIN, DHTTYPE); 
 
 // -------------------------------------------------------------------------------------------
-// SERVIDOR WEB – archivos desde SPIFFS
+// SERVIDOR WEB – Archivos SPIFFS
 // -------------------------------------------------------------------------------------------
 
 void handleRoot() {
@@ -70,28 +72,26 @@ void handleCSS() {
 
 void handleImages() {
     String path = server.uri();
-    File file = SPIFFS.open(path, "r");
-
-    if (!file) {
+    if (SPIFFS.exists(path)) {
+        File file = SPIFFS.open(path, "r");
+        if (path.endsWith(".svg")) server.streamFile(file, "image/svg+xml");
+        else if (path.endsWith(".png")) server.streamFile(file, "image/png");
+        else if (path.endsWith(".jpg")) server.streamFile(file, "image/jpeg");
+        else server.streamFile(file, "application/octet-stream");
+        file.close();
+    } else {
         server.send(404, "text/plain", "Imagen no encontrada");
-        return;
     }
-
-    if (path.endsWith(".svg")) server.streamFile(file, "image/svg+xml");
-    else if (path.endsWith(".png")) server.streamFile(file, "image/png");
-    else if (path.endsWith(".jpg")) server.streamFile(file, "image/jpeg");
-    else server.streamFile(file, "application/octet-stream");
-
-    file.close();
 }
 
 // -------------------------------------------------------------------------------------------
-// ENDPOINT /e PARA EL FRONTEND
+// ENDPOINT /e PARA EL FRONTEND (AJAX/FETCH)
 // -------------------------------------------------------------------------------------------
 
 void handleData() {
-    // Actualizamos también aquí por si alguien consulta directo a la API del ESP
-    String data = "humedad:" + String(humedad) +
+    // Construimos el string con los datos REALES
+    // Nota: enviamos 'humedad' como la del suelo, que es lo critico para la planta
+    String data = "humedad:" + String(humedadSuelo) +
                   ",pir:" + String(pir) +
                   ",luminosidad:" + String(luminosidad) +
                   ",temperatura:" + String(temperatura) + 
@@ -110,9 +110,9 @@ void reconnect() {
         if (client.connect("ESP32_Plantas_Client")) {
             Serial.println("Conectado.");
         } else {
-            Serial.print("Error rc=");
+            Serial.print("Fallo, rc=");
             Serial.print(client.state());
-            Serial.println(" | Reintentando en 2s...");
+            Serial.println(" Reintentando en 2s...");
             delay(2000);
         }
     }
@@ -125,122 +125,155 @@ void reconnect() {
 void setup() {
     Serial.begin(115200);
 
-    // ----------------- MONTAR SPIFFS -----------------
+    // 1. SPIFFS
     if (!SPIFFS.begin(true)) {
         Serial.println("❌ Error montando SPIFFS");
     } else {
         Serial.println("✅ SPIFFS montado correctamente");
     }
 
-    // ----------------- WIFI -----------------
+    // 2. WIFI
     WiFi.begin(ssid, password);
-    Serial.print("Conectando a WiFi ");
-
+    Serial.print("Conectando a WiFi");
     while (WiFi.status() != WL_CONNECTED) {
-        Serial.print(".");
         delay(500);
+        Serial.print(".");
     }
+    Serial.println("\n✅ WiFi conectado. IP: " + WiFi.localIP().toString());
 
-    Serial.println("\n✅ WiFi conectado");
-    Serial.print("IP del ESP32: ");
-    Serial.println(WiFi.localIP());
-
-    // ----------------- SERVIDOR HTTP -----------------
+    // 3. SERVER
     server.on("/", HTTP_GET, handleRoot);
     server.on("/styles.css", HTTP_GET, handleCSS);
     server.on("/e", HTTP_GET, handleData);
-
+    server.onNotFound(handleImages); // Maneja cualquier otra ruta como archivo (imágenes)
     server.begin();
-    Serial.println("🌐 Servidor web iniciado en puerto 80");
+    Serial.println("🌐 Servidor web iniciado");
 
-    // ----------------- MQTT -----------------
+    // 4. MQTT
     client.setServer(mqtt_server, mqtt_port);
 
-    // ----------------- PINES & SENSORES -----------------
+    // 5. HARDWARE PINES
+    // Nota: Pines 34 y 35 son solo entrada (Input Only) en ESP32
     pinMode(HUMEDAD_PIN, INPUT);
     pinMode(LDR_PIN, INPUT);
     pinMode(PIR_PIN, INPUT);
-    dht.begin(); // Iniciamos el DHT aunque usaremos datos falsos por ahora
+    
+    dht.begin();
 }
 
 // -------------------------------------------------------------------------------------------
-// LOOP
+// LOOP PRINCIPAL (CON DIAGNÓSTICO DE ERRORES)
 // -------------------------------------------------------------------------------------------
 
 void loop() {
-    server.handleClient();
+    server.handleClient(); 
 
-    if (!client.connected()) reconnect(); // Reconectar MQTT si cae
-    client.loop(); // Mantener MQTT vivo
+    if (!client.connected()) reconnect();
+    client.loop(); 
 
-    // --- A) TEMPERATURA (DHT11) ---
-    float t_real = dht.readTemperature();
-    if (!isnan(t_real)) {
-        temperatura = t_real;
+    Serial.println("\n--- 🔍 DIAGNÓSTICO DE SENSORES ---");
+
+    // ==========================================
+    // 1. TEMPERATURA (DHT11)
+    // ==========================================
+    float t = dht.readTemperature();
+    float h = dht.readHumidity();
+    
+    if (!isnan(t) && !isnan(h)) {
+        temperatura = t;
+        humedadAire = h; // Guardamos dato aunque no se envíe por MQTT aun
+        Serial.printf("✅ DHT11: %.1f °C | %.1f %% Humedad\n", t, h);
     } else {
-        Serial.println("⚠️ Error leyendo DHT11");
+        Serial.println("⚠️ FALLO DHT11: No responde. Revisa cable azul (Pin 33) y alimentación.");
     }
 
-    // --- B) HUMEDAD DE SUELO (Analógico) ---
-    // El ESP32 lee de 0 a 4095. 
-    // Usualmente: 4095 = Aire (Seco), 0 = Agua (Mojado)
-    int lecturaRaw = analogRead(HUMEDAD_PIN);
+    // ==========================================
+    // 2. HUMEDAD DE SUELO (Analógico AO - Pin 34)
+    // ==========================================
+    int lecturaSueloRaw = analogRead(HUMEDAD_PIN);
     
-    // Convertimos el valor crudo a porcentaje (0% a 100%)
-    humedad = map(lecturaRaw, 4095, 0, 0, 100); 
+    // LOGICA DE DETECCION DE ERROR:
+    // Rango normal en agua: ~1500-2000. Rango en aire (seco): ~4095.
+    // Si marca 0 absoluto, suele ser cortocircuito a GND o falla del módulo.
     
-    // Limitamos para que no salga -5% o 105% por ruido
-    if (humedad < 0) humedad = 0;
-    if (humedad > 100) humedad = 100;
+    if (lecturaSueloRaw < 50) {
+        Serial.printf("⚠️ FALLO SUELO (Raw: %d): Lectura demasiado baja. Posible corto o cable suelto.\n", lecturaSueloRaw);
+        humedadSuelo = 0; // Asumimos 0 por error
+    } else if (lecturaSueloRaw >= 4090) {
+        Serial.printf("⚠️ ALERTA SUELO (Raw: %d): Sensor en aire o desconectado (Muy Seco).\n", lecturaSueloRaw);
+        humedadSuelo = 0; // Seco
+    } else {
+        // Mapeo normal
+        humedadSuelo = map(lecturaSueloRaw, 4095, 1500, 0, 100); 
+        humedadSuelo = constrain(humedadSuelo, 0, 100);
+        Serial.printf("✅ SUELO: %d %% (Raw: %d)\n", humedadSuelo, lecturaSueloRaw);
+    }
 
-    // Lee la cantidad de luz (0 a 4095)
-    luminosidad = analogRead(LDR_PIN);
+    // ==========================================
+    // 3. LUZ (LDR - Pin 32)
+    // ==========================================
+    int lecturaLuzRaw = analogRead(LDR_PIN);
 
-    // Lee 1 si hay movimiento, 0 si no
+    // Si la lectura es 0 absoluto o 4095 absoluto, suele ser sospechoso en un LDR
+    // (a menos que estés en oscuridad total o apuntando al sol).
+    if (lecturaLuzRaw == 0) {
+        Serial.println("⚠️ ALERTA LUZ (Raw: 0): Oscuridad total o cable de señal desconectado.");
+        luminosidad = 0;
+    } else if (lecturaLuzRaw == 4095) {
+        Serial.println("⚠️ ALERTA LUZ (Raw: 4095): Luz saturada o cable VCC desconectado.");
+        luminosidad = 100;
+    } else {
+        luminosidad = map(lecturaLuzRaw, 0, 4095, 0, 100);
+        Serial.printf("✅ LUZ: %d %% (Raw: %d)\n", luminosidad, lecturaLuzRaw);
+    }
+
+    // ==========================================
+    // 4. PIR (Movimiento - Pin 35)
+    // ==========================================
+    // El PIR es digital (0 o 1). No podemos saber si está roto por software, 
+    // pero podemos mostrar su estado claramente.
     pir = digitalRead(PIR_PIN);
+    
+    if (pir == HIGH) {
+        Serial.println("🏃 PIR: ¡MOVIMIENTO DETECTADO! (Estado: 1)");
+    } else {
+        Serial.println("💤 PIR: Sin movimiento (Estado: 0)");
+    }
 
-
-    Serial.print("🌡️ Temp: "); Serial.print(temperatura); Serial.println(" °C");
-    Serial.print("💧 Humedad: "); Serial.print(humedad); Serial.println(" %");
-    Serial.print("💡 Luz: "); Serial.println(luminosidad);
-    Serial.print("🏃 PIR: "); Serial.println(pir);
     Serial.println("--------------------------------");
 
-    // ----------------------------------------------------------
-    // 4. ENVIAR POR MQTT (JSON)
-    // ----------------------------------------------------------
+    // ==========================================
+    // ENVÍO POR MQTT
+    // ==========================================
     JsonDocument doc;
+    char buffer[100];
 
-    // ENVÍO 1: HUMEDAD
-    doc["valor"] = humedad;
+    // Envio Humedad
+    doc["valor"] = humedadSuelo;
     doc["unidad"] = "%";
-    char humPayload[90];
-    serializeJson(doc, humPayload);
-    client.publish("sensores/humedad", humPayload);
+    serializeJson(doc, buffer);
+    client.publish("sensores/humedad", buffer);
 
-    // ENVÍO 2: TEMPERATURA
+    // Envio Temperatura
     doc.clear();
     doc["valor"] = temperatura;
     doc["unidad"] = "C";
-    char tempPayload[90];
-    serializeJson(doc, tempPayload);
-    client.publish("sensores/temperatura", tempPayload);
+    serializeJson(doc, buffer);
+    client.publish("sensores/temperatura", buffer);
 
-    // ENVÍO 3: LUZ
+    // Envio Luz
     doc.clear();
     doc["valor"] = luminosidad;
-    doc["unidad"] = "LX"; // O valor crudo (RAW)
-    char luzPayload[90];
-    serializeJson(doc, luzPayload);
-    client.publish("sensores/luz", luzPayload);
+    doc["unidad"] = "%";
+    serializeJson(doc, buffer);
+    client.publish("sensores/luz", buffer);
 
-    // ENVÍO 4: PIR
+    // Envio PIR
     doc.clear();
     doc["valor"] = pir;
     doc["unidad"] = "";
-    char pirPayload[90];
-    serializeJson(doc, pirPayload);
-    client.publish("sensores/pir", pirPayload);
-    
-    delay(5000); 
+    serializeJson(doc, buffer);
+    client.publish("sensores/pir", buffer);
+
+    delay(3000); 
 }
